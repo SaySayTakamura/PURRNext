@@ -37,6 +37,89 @@ namespace PURRNext
         //Global blacklist, loaded from file
         static List<string> GlobalBlacklist = new List<string>();
 
+        static void DockerMain()
+        {
+            while(true)
+            {
+                //Loads the Tags file and check for the amount of returned tags
+                var Searches = TagImporter.ImportTags(TagsFile);
+
+                if(Searches.Count != 0)
+                {
+                    List<Task> Tasks = new List<Task>();
+                    for(int i = 0; i < Searches.Count; i++)
+                    {
+                        
+                        var tag_string = Searches[i].Tag;
+                        var tag_pages = Searches[i].Pages;
+                        var tag_amount = Searches[i].Amount;
+
+                        Console.WriteLine("Composing tags blacklist");
+
+                        var BL = LoadBlackListText();
+                        var backup_list_string = "";
+                        
+                        if(BL.Count != 0)
+                        {
+                            for(int en = 0; en < BL.Count; en++)
+                            {
+                                if(tag_string .Contains(BL[en]))
+                                {
+                                    int current = en;
+                                    Console.WriteLine("Tags conflict with blacklist");
+                                    Console.WriteLine($"Removing - {BL[current]}");
+                                    tag_string = tag_string.Replace(BL[current], "");
+                                }
+                            }
+                            
+                            //Compose final string with both search tags and blacklist tags
+                            var blacklist_string = ComposeBlacklistString(BL);
+                            tag_string = $"{tag_string} {blacklist_string}";
+                            Console.WriteLine($"Final TAG string - {tag_string}");
+                            backup_list_string = blacklist_string;
+                        }
+                        else
+                        {
+                            Console.WriteLine("No tags found on the loaded blacklist file");
+                        }
+
+                        var t = Task.Run(
+                        async ()=>
+                        {
+                            var e621Client = new E621ClientBuilder()
+                            .WithUserAgent("PURRNext - An E621 CLI BACKEND", "0.01", "EdgarTakamura", "Bluesky")
+                            .WithMaximumConnections(E621Constants.MaximumConnectionsLimit)
+                            .WithRequestInterval(E621Constants.MinimumRequestInterval)
+                            .Build();
+
+                            Fetcher fetcher = new Fetcher(e621Client, tag_string, tag_pages);
+                            fetcher.AssignLoggerInstance(global_logger);
+                            fetcher.AssignConfigurationFile(global_config);
+                            fetcher.AssignOutputDir(SessionOutput);
+                            fetcher.AssignBlacklistString(backup_list_string);
+                            fetcher.Start();
+                        });
+                        
+                        Tasks.Add(t);
+                    }
+                    Task.WhenAll(Tasks).Wait();
+
+                    //Sleeps the thread, waiting for the next batch of searches;
+                    Console.WriteLine("Sleeping -w-");
+                    Task.Delay(TimeSpan.FromMinutes(5)).Wait();
+                }
+                else
+                {
+                    Console.WriteLine("No searches to be done!");
+                    Console.WriteLine("Sleeping -w-");
+                    //Sleeps the thread if there is no tags to search;
+                    //Thread.Sleep(TimeSpan.FromMinutes(120));
+                    Task.Delay(TimeSpan.FromMinutes(5)).Wait();
+                }
+            }
+        }
+
+
         //Loads blacklist file
         static List<string> LoadBlackListText()
         {
@@ -906,88 +989,13 @@ namespace PURRNext
                 {
                     
 
+  /*                   //Don't separate threads
+                    //Run both tasks in parallel
                     Console.WriteLine("Initializing main thread!");
                     var main = Task.Run(
                     async ()=>
                     {
-                        while(true)
-                        {
-                            //Loads the Tags file and check for the amount of returned tags
-                            var Searches = TagImporter.ImportTags(TagsFile);
-
-                            if(Searches.Count != 0)
-                            {
-                                List<Task> Tasks = new List<Task>();
-                                for(int i = 0; i < Searches.Count; i++)
-                                {
-                                    
-                                    var tag_string = Searches[i].Tag;
-                                    var tag_pages = Searches[i].Pages;
-                                    var tag_amount = Searches[i].Amount;
-
-                                    Console.WriteLine("Composing tags blacklist");
-
-                                    var BL = LoadBlackListText();
-                                    var backup_list_string = "";
-                                    
-                                    if(BL.Count != 0)
-                                    {
-                                        for(int en = 0; en < BL.Count; en++)
-                                        {
-                                            if(tag_string .Contains(BL[en]))
-                                            {
-                                                int current = en;
-                                                Console.WriteLine("Tags conflict with blacklist");
-                                                Console.WriteLine($"Removing - {BL[current]}");
-                                                tag_string = tag_string.Replace(BL[current], "");
-                                            }
-                                        }
-                                        
-                                        //Compose final string with both search tags and blacklist tags
-                                        var blacklist_string = ComposeBlacklistString(BL);
-                                        tag_string = $"{tag_string} {blacklist_string}";
-                                        Console.WriteLine($"Final TAG string - {tag_string}");
-                                        backup_list_string = blacklist_string;
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("No tags found on the loaded blacklist file");
-                                    }
-
-                                    var t = Task.Run(
-                                    async ()=>
-                                    {
-                                        var e621Client = new E621ClientBuilder()
-                                        .WithUserAgent("PURRNext - An E621 CLI BACKEND", "0.01", "EdgarTakamura", "Bluesky")
-                                        .WithMaximumConnections(E621Constants.MaximumConnectionsLimit)
-                                        .WithRequestInterval(E621Constants.MinimumRequestInterval)
-                                        .Build();
-
-                                        Fetcher fetcher = new Fetcher(e621Client, tag_string, tag_pages);
-                                        fetcher.AssignLoggerInstance(global_logger);
-                                        fetcher.AssignConfigurationFile(global_config);
-                                        fetcher.AssignOutputDir(SessionOutput);
-                                        fetcher.AssignBlacklistString(backup_list_string);
-                                        fetcher.Start();
-                                    });
-                                    
-                                    Tasks.Add(t);
-                                }
-                                Task.WhenAll(Tasks).Wait();
-
-                                //Sleeps the thread, waiting for the next batch of searches;
-                                Console.WriteLine("Sleeping -w-");
-                                await Task.Delay(TimeSpan.FromMinutes(5));
-                            }
-                            else
-                            {
-                                Console.WriteLine("No searches to be done!");
-                                Console.WriteLine("Sleeping -w-");
-                                //Sleeps the thread if there is no tags to search;
-                                //Thread.Sleep(TimeSpan.FromMinutes(120));
-                                await Task.Delay(TimeSpan.FromMinutes(5));
-                            }
-                        }
+                        
                     });
                     Thread mt = new Thread(main.Start);
                     mt.Name = "Main Thread";
@@ -1025,7 +1033,12 @@ namespace PURRNext
                     ut.Start();
                     
                     Console.WriteLine("End of Runtime - Docker");
-                    Environment.Exit(0);
+                    Environment.Exit(0); */
+
+                    DockerMain();
+
+                    Console.WriteLine("End of Runtime - Docker");
+                    Environment.Exit(0); 
                 }
                 catch(Exception e)
                 {
