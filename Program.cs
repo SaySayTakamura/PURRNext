@@ -908,9 +908,10 @@ namespace PURRNext
 
                 Console.WriteLine("Initializing main thread!");
                 Task main = new Task(
-                ()=>
+                async ()=>
                 {
-                    while(true)
+                    var done = false;
+                    while(!done)
                     {
                         //Loads the Tags file and check for the amount of returned tags
                         var Searches = TagImporter.ImportTags(TagsFile);
@@ -973,13 +974,16 @@ namespace PURRNext
                                 
                                 Tasks.Add(t);
                             }
-                            Task.WhenAll(Tasks);
+                            Task.WhenAll(Tasks).Wait();
 
+                            Console.WriteLine("Sleeping -w-");
                             //Sleeps the thread, waiting for the next batch of searches;
                             Thread.Sleep(TimeSpan.FromMinutes(120));
                         }
                         else
                         {
+                            Console.WriteLine("No searches to be done!");
+                            Console.WriteLine("Sleeping...");
                             //Sleeps the thread if there is no tags to search;
                             Thread.Sleep(TimeSpan.FromMinutes(120));
                         }
@@ -993,7 +997,8 @@ namespace PURRNext
                 Task updater = new Task(
                 async ()=>
                 {
-                    while(true)
+                    var done = false;
+                    while(!done)
                     {
                         var update_task = Task.Run(async ()=>
                         {
@@ -1010,7 +1015,7 @@ namespace PURRNext
                                 Console.WriteLine("Something happened within the Updater, check the logs for a detailed report");
                             }
                         });
-                        Task.WhenAll(update_task);
+                        Task.WhenAll(update_task).Wait();
                         Thread.Sleep(TimeSpan.FromMinutes(120));
                     }
                 });
