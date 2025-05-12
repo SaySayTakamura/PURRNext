@@ -906,122 +906,124 @@ namespace PURRNext
                 {
                     
 
-                Console.WriteLine("Initializing main thread!");
-                Task main = new Task(
-                async ()=>
-                {
-                    var done = false;
-                    while(!done)
+                    Console.WriteLine("Initializing main thread!");
+                    var main = Task.Run(
+                    async ()=>
                     {
-                        //Loads the Tags file and check for the amount of returned tags
-                        var Searches = TagImporter.ImportTags(TagsFile);
-
-                        if(Searches.Count != 0)
+                        var done = false;
+                        while(!done)
                         {
-                            List<Task> Tasks = new List<Task>();
-                            for(int i = 0; i < Searches.Count; i++)
+                            //Loads the Tags file and check for the amount of returned tags
+                            var Searches = TagImporter.ImportTags(TagsFile);
+
+                            if(Searches.Count != 0)
                             {
-                                
-                                var tag_string = Searches[i].Tag;
-                                var tag_pages = Searches[i].Pages;
-                                var tag_amount = Searches[i].Amount;
-
-                                Console.WriteLine("Composing tags blacklist");
-
-                                var BL = LoadBlackListText();
-                                var backup_list_string = "";
-                                
-                                if(BL.Count != 0)
+                                List<Task> Tasks = new List<Task>();
+                                for(int i = 0; i < Searches.Count; i++)
                                 {
-                                    for(int en = 0; en < BL.Count; en++)
-                                    {
-                                        if(tag_string .Contains(BL[en]))
-                                        {
-                                            int current = en;
-                                            Console.WriteLine("Tags conflict with blacklist");
-                                            Console.WriteLine($"Removing - {BL[current]}");
-                                            tag_string = tag_string.Replace(BL[current], "");
-                                        }
-                                    }
                                     
-                                    //Compose final string with both search tags and blacklist tags
-                                    var blacklist_string = ComposeBlacklistString(BL);
-                                    tag_string = $"{tag_string} {blacklist_string}";
-                                    Console.WriteLine($"Final TAG string - {tag_string}");
-                                    backup_list_string = blacklist_string;
+                                    var tag_string = Searches[i].Tag;
+                                    var tag_pages = Searches[i].Pages;
+                                    var tag_amount = Searches[i].Amount;
+
+                                    Console.WriteLine("Composing tags blacklist");
+
+                                    var BL = LoadBlackListText();
+                                    var backup_list_string = "";
+                                    
+                                    if(BL.Count != 0)
+                                    {
+                                        for(int en = 0; en < BL.Count; en++)
+                                        {
+                                            if(tag_string .Contains(BL[en]))
+                                            {
+                                                int current = en;
+                                                Console.WriteLine("Tags conflict with blacklist");
+                                                Console.WriteLine($"Removing - {BL[current]}");
+                                                tag_string = tag_string.Replace(BL[current], "");
+                                            }
+                                        }
+                                        
+                                        //Compose final string with both search tags and blacklist tags
+                                        var blacklist_string = ComposeBlacklistString(BL);
+                                        tag_string = $"{tag_string} {blacklist_string}";
+                                        Console.WriteLine($"Final TAG string - {tag_string}");
+                                        backup_list_string = blacklist_string;
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("No tags found on the loaded blacklist file");
+                                    }
+
+                                    var t = Task.Run(
+                                    async ()=>
+                                    {
+                                        var e621Client = new E621ClientBuilder()
+                                        .WithUserAgent("PURRNext - An E621 CLI BACKEND", "0.01", "EdgarTakamura", "Bluesky")
+                                        .WithMaximumConnections(E621Constants.MaximumConnectionsLimit)
+                                        .WithRequestInterval(E621Constants.MinimumRequestInterval)
+                                        .Build();
+
+                                        Fetcher fetcher = new Fetcher(e621Client, tag_string, tag_pages);
+                                        fetcher.AssignLoggerInstance(global_logger);
+                                        fetcher.AssignConfigurationFile(global_config);
+                                        fetcher.AssignOutputDir(SessionOutput);
+                                        fetcher.AssignBlacklistString(backup_list_string);
+                                        fetcher.Start();
+                                    });
+                                    
+                                    Tasks.Add(t);
                                 }
-                                else
-                                {
-                                    Console.WriteLine("No tags found on the loaded blacklist file");
-                                }
+                                Task.WhenAll(Tasks).Wait();
 
-                                var t = Task.Run(
-                                async ()=>
-                                {
-                                    var e621Client = new E621ClientBuilder()
-                                    .WithUserAgent("PURRNext - An E621 CLI BACKEND", "0.01", "EdgarTakamura", "Bluesky")
-                                    .WithMaximumConnections(E621Constants.MaximumConnectionsLimit)
-                                    .WithRequestInterval(E621Constants.MinimumRequestInterval)
-                                    .Build();
-
-                                    Fetcher fetcher = new Fetcher(e621Client, tag_string, tag_pages);
-                                    fetcher.AssignLoggerInstance(global_logger);
-                                    fetcher.AssignConfigurationFile(global_config);
-                                    fetcher.AssignOutputDir(SessionOutput);
-                                    fetcher.AssignBlacklistString(backup_list_string);
-                                    fetcher.Start();
-                                });
-                                
-                                Tasks.Add(t);
-                            }
-                            Task.WhenAll(Tasks).Wait();
-
-                            Console.WriteLine("Sleeping -w-");
-                            //Sleeps the thread, waiting for the next batch of searches;
-                            Thread.Sleep(TimeSpan.FromMinutes(120));
-                        }
-                        else
-                        {
-                            Console.WriteLine("No searches to be done!");
-                            Console.WriteLine("Sleeping...");
-                            //Sleeps the thread if there is no tags to search;
-                            Thread.Sleep(TimeSpan.FromMinutes(120));
-                        }
-                    }
-                });
-                Thread mt = new Thread(main.Start);
-                mt.Name = "Main Thread";
-                mt.Start();
-
-                Console.WriteLine("Initializing updater thread!");
-                Task updater = new Task(
-                async ()=>
-                {
-                    var done = false;
-                    while(!done)
-                    {
-                        var update_task = Task.Run(async ()=>
-                        {
-                            TagUpdater updtr = new TagUpdater();
-                            updtr.WithListPath(UpdatesFile);
-                            updtr.LoadTagList();
-                            var result = await updtr.UpdateTagsAsync(global_logger);
-                            if(result == true)
-                            {
-                                Console.WriteLine("All tags have been updated");
+                                Console.WriteLine("Sleeping -w-");
+                                //Sleeps the thread, waiting for the next batch of searches;
+                                Thread.Sleep(TimeSpan.FromMinutes(120));
                             }
                             else
                             {
-                                Console.WriteLine("Something happened within the Updater, check the logs for a detailed report");
+                                Console.WriteLine("No searches to be done!");
+                                Console.WriteLine("Sleeping...");
+                                //Sleeps the thread if there is no tags to search;
+                                Thread.Sleep(TimeSpan.FromMinutes(120));
                             }
-                        });
-                        Task.WhenAll(update_task).Wait();
-                        Thread.Sleep(TimeSpan.FromMinutes(120));
-                    }
-                });
-                Thread ut = new Thread(updater.Start);
-                ut.Name = "Updater Thread";
-                ut.Start();
+                        }
+                    });
+                    Thread mt = new Thread(main.Start);
+                    mt.Name = "Main Thread";
+                    mt.Start();
+
+                    Console.WriteLine("Initializing updater thread!");
+                    Task updater = Task.Run(
+                    async ()=>
+                    {
+                        var done = false;
+                        while(!done)
+                        {
+                            var update_task = Task.Run(async ()=>
+                            {
+                                TagUpdater updtr = new TagUpdater();
+                                updtr.WithListPath(UpdatesFile);
+                                updtr.LoadTagList();
+                                var result = await updtr.UpdateTagsAsync(global_logger);
+                                if(result == true)
+                                {
+                                    Console.WriteLine("All tags have been updated");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Something happened within the Updater, check the logs for a detailed report");
+                                }
+                            });
+                            Task.WhenAll(update_task).Wait();
+                            Thread.Sleep(TimeSpan.FromMinutes(120));
+                        }
+                    });
+                    Thread ut = new Thread(updater.Start);
+                    ut.Name = "Updater Thread";
+                    ut.Start();
+                    Console.WriteLine("End of Runtime - Docker");
+                    Environment.Exit(0);
                 }
                 catch(Exception e)
                 {
