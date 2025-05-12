@@ -90,7 +90,7 @@ namespace PURRNext.TagFile
                     TagSearchData.Tag = line;
                     TagSearchData.Pages = 10;
                     TagSearchData.Amount = 75;
-                    
+                    result.Add(TagSearchData);                    
                 }
             }
             return result;
