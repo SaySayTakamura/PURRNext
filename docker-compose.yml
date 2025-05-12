@@ -1,0 +1,14 @@
+services:
+  purr-next:
+    image: purr-next-dev
+    volumes:
+      - ./Content:${SessionsPath}
+      - ./Data:${ConfigPath}
+    #ports:
+    #  - 5064:4096 #Live UI
+    env_file:
+      - ./.env
+    command: [
+      "Docker",
+      "from-file"
+    ]
