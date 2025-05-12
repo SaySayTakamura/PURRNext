@@ -910,8 +910,7 @@ namespace PURRNext
                     var main = Task.Run(
                     async ()=>
                     {
-                        var done = false;
-                        while(!done)
+                        while(true)
                         {
                             //Loads the Tags file and check for the amount of returned tags
                             var Searches = TagImporter.ImportTags(TagsFile);
@@ -976,16 +975,17 @@ namespace PURRNext
                                 }
                                 Task.WhenAll(Tasks).Wait();
 
-                                Console.WriteLine("Sleeping -w-");
                                 //Sleeps the thread, waiting for the next batch of searches;
-                                Thread.Sleep(TimeSpan.FromMinutes(120));
+                                Console.WriteLine("Sleeping -w-");
+                                await Task.Delay(TimeSpan.FromMinutes(5));
                             }
                             else
                             {
                                 Console.WriteLine("No searches to be done!");
-                                Console.WriteLine("Sleeping...");
+                                Console.WriteLine("Sleeping -w-");
                                 //Sleeps the thread if there is no tags to search;
-                                Thread.Sleep(TimeSpan.FromMinutes(120));
+                                //Thread.Sleep(TimeSpan.FromMinutes(120));
+                                await Task.Delay(TimeSpan.FromMinutes(5));
                             }
                         }
                     });
@@ -997,8 +997,7 @@ namespace PURRNext
                     Task updater = Task.Run(
                     async ()=>
                     {
-                        var done = false;
-                        while(!done)
+                        while(true)
                         {
                             var update_task = Task.Run(async ()=>
                             {
@@ -1012,16 +1011,19 @@ namespace PURRNext
                                 }
                                 else
                                 {
-                                    Console.WriteLine("Something happened within the Updater, check the logs for a detailed report");
+                                    Console.WriteLine("No tags have been update... this or some error happened, check the logs if you think an error occurred!");
                                 }
                             });
                             Task.WhenAll(update_task).Wait();
-                            Thread.Sleep(TimeSpan.FromMinutes(120));
+
+                            Console.WriteLine("Sleeping -w-");
+                            await Task.Delay(TimeSpan.FromMinutes(5));
                         }
                     });
                     Thread ut = new Thread(updater.Start);
                     ut.Name = "Updater Thread";
                     ut.Start();
+                    
                     Console.WriteLine("End of Runtime - Docker");
                     Environment.Exit(0);
                 }
