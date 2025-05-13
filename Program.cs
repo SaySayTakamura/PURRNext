@@ -975,6 +975,7 @@ namespace PURRNext
                 if(args.Length > 1)
                 {
                     Console.WriteLine($"Extra argument detected - {args[1]}");
+                    Environment.Exit(1);
                 }
 
                 //Initialize directories
