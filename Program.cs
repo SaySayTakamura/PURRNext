@@ -24,7 +24,6 @@ namespace PURRNext
         static string BlacklistFile = "";
 
         //Extra directories for the Docker implementation
-
         static string DataDir = "";
         static string ContentDir = "";
         static string TagsFile = "";
@@ -103,6 +102,8 @@ namespace PURRNext
                         Tasks.Add(t);
                     }
                     Task.WhenAll(Tasks).Wait();
+                    Console.WriteLine("Cleaning UP Tags");
+                    TagImporter.ClearTags(TagsFile);
 
                     //Sleeps the thread, waiting for the next batch of searches;
                     Console.WriteLine("Sleeping -w-");
@@ -119,6 +120,10 @@ namespace PURRNext
             }
         }
 
+        static void DockerUpdater()
+        {
+
+        }
 
         //Loads blacklist file
         static List<string> LoadBlackListText()
@@ -622,7 +627,6 @@ namespace PURRNext
 
             Console.WriteLine($"[System] - Application is running on the '{mode}' mode\n");
 
-
             if (mode == "BATCH")
             {
                 SetupDirectories();
@@ -966,21 +970,13 @@ namespace PURRNext
                 */
             }
             else if(mode == "Docker")
-            {   
+            {                
 
-                //Intro
-                Console.WriteLine("\n--------------------------------------------");
-                Console.WriteLine("-------------------------------------------------- --    -\n");
+                if(args.Length > 1)
+                {
+                    Console.WriteLine($"Extra argument detected - {args[1]}");
+                }
 
-                Console.WriteLine("     PURR NEXT - An E621 CLI BACKEND (WIP)");
-                Console.WriteLine("     VERSION - 0.0.1");
-                Console.WriteLine("     Author: Edgar Takamura");
-
-                Console.WriteLine("\n-------------------------------------------------- --    -");
-                Console.WriteLine("--------------------------------------------\n");    
-                
-                Console.WriteLine($"[System] - Available Cores: {Environment.ProcessorCount}");
-                
                 //Initialize directories
                 Console.WriteLine("INITIALIZING DOCKER DIRECTORIES");
                 SetupDockerDirectories();
@@ -989,7 +985,8 @@ namespace PURRNext
                 {
                     
 
-  /*                   //Don't separate threads
+                    /*
+                    //Don't separate threads
                     //Run both tasks in parallel
                     Console.WriteLine("Initializing main thread!");
                     var main = Task.Run(
@@ -1034,8 +1031,8 @@ namespace PURRNext
                     
                     Console.WriteLine("End of Runtime - Docker");
                     Environment.Exit(0); */
-
                     DockerMain();
+                    //Parallel.Invoke(DockerMain, DockerUpdater);
 
                     Console.WriteLine("End of Runtime - Docker");
                     Environment.Exit(0); 

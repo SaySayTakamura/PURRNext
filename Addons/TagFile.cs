@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace PURRNext.TagFile
 {
     public class TagSearchData
@@ -34,7 +36,7 @@ namespace PURRNext.TagFile
                     }
                     if(tag_string.ElementAt(tag_string.Length-1) == ' ')
                     {
-                        Console.WriteLine("Removing blank space at the start of the string");
+                        Console.WriteLine("Removing blank space at the end of the string");
                         tag_string = tag_string.Remove(tag_string.Length-1, 1);
                     }
                     else
@@ -64,6 +66,11 @@ namespace PURRNext.TagFile
                                     Console.WriteLine($"An error has occurred\nError:{e}");
                                 }
                             }
+                            else
+                            {
+                                Console.WriteLine("No pagination option found, using default value");
+                                TagSearchData.Pages = 10;
+                            }
                             if(options[o].Contains("a:"))
                             {
                                 try
@@ -76,6 +83,11 @@ namespace PURRNext.TagFile
                                     Console.WriteLine($"An error has occurred\nError:{e}");
                                 }
                             }
+                            else
+                            {
+                                Console.WriteLine("No quantity option found, using default value");
+                                TagSearchData.Amount = 320;
+                            }
                         }
                         else
                         {
@@ -87,6 +99,26 @@ namespace PURRNext.TagFile
                 else
                 {
                     Console.WriteLine("No options provided utilizing default values");
+                    Console.WriteLine("Formatting string");
+                    var tag_string = line;
+                    if(tag_string.ElementAt(0) == ' ')
+                    {
+                        Console.WriteLine("Removing blank space at the start of the string");
+                        tag_string = tag_string.Remove(0, 1);
+                    }
+                    else
+                    {
+                        Console.WriteLine("No blank space on the start of the string");
+                    }
+                    if(tag_string.ElementAt(tag_string.Length-1) == ' ')
+                    {
+                        Console.WriteLine("Removing blank space at the end of the string");
+                        tag_string = tag_string.Remove(tag_string.Length-1, 1);
+                    }
+                    else
+                    {
+                        Console.WriteLine("No blank space on the end of the string");
+                    }
                     TagSearchData.Tag = line;
                     TagSearchData.Pages = 10;
                     TagSearchData.Amount = 75;
@@ -94,6 +126,16 @@ namespace PURRNext.TagFile
                 }
             }
             return result;
+        }
+        public static void ClearTags(string path)
+        {
+            using (FileStream fs = File.Create(path))
+            {
+                byte[] info = new UTF8Encoding(true).GetBytes($"");
+                // Add some information to the file.
+                fs.Write(info, 0, info.Length);
+                fs.Close(); //Remove in case of regret
+            }
         }
     }
 }

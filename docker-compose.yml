@@ -10,5 +10,4 @@ services:
       - ./.env
     command: [
       "Docker",
-      "from-file"
     ]
