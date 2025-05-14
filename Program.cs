@@ -106,8 +106,8 @@ namespace PURRNext
 
                                     string json = r.ReadToEnd();
                                     var data = JsonConvert.DeserializeObject<LoginInputData>(json);
-                                    var u = StringCipher.Decrypt(data.GetUsername(), rash_pass);
-                                    var p = StringCipher.Decrypt(data.GetPassword(), rash_pass);
+                                    var u = StringCipher.Decrypt(data.Username, rash_pass);
+                                    var p = StringCipher.Decrypt(data.Password, rash_pass);
 
                                     Console.WriteLine("Logging in!");
 
