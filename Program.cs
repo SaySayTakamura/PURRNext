@@ -1035,161 +1035,114 @@ namespace PURRNext
             }
             else if(mode == "Docker")
             {                
-                LoginInputData LoginData;
-
-                if(args.Length > 1)
-                {
-                    if(args[1].Contains("login", StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        Console.WriteLine("Welcome to PURR->Next Docker Login Assistant");
-                        Console.WriteLine("Reminder: This argument is only used to REGISTER a user\nfor the first time!");
-                        Console.WriteLine("When we REGISTER a user, we encrypt their login data and store their data elsewhere accessible to the app!");
-                        Console.WriteLine("The input file will be deleted once the process is done!");
-                        Console.WriteLine("---------------------------------------------------- -\n");
-                        var LDPath = $"{DataDir}/login-input.txt";
-                        if(File.Exists(LDPath))
-                        {
-                            var ui = "";
-                            var pi= "";
-                            Console.WriteLine("Found the Login file, loading data");
-                            var lines = File.ReadAllLines(LDPath);
-
-                            //We just need two lines, no more, no less, one for the password, one for the username
-                            if(lines.Length == 2)
-                            {
-                                if(lines[0].Contains("U=", StringComparison.CurrentCultureIgnoreCase))
-                                {
-                                    ui = lines[0].Replace("U=", "", StringComparison.CurrentCultureIgnoreCase); 
-                                }
-                                else
-                                {
-                                    Console.WriteLine("No user found, quitting!");
-                                    Environment.Exit(-1);
-                                }
-                                if(lines[1].Contains("P=", StringComparison.CurrentCultureIgnoreCase))
-                                {
-                                    pi = lines[1].Replace("P=", "", StringComparison.CurrentCultureIgnoreCase); 
-                                }
-                                else
-                                {
-                                    Console.WriteLine("No password found, quitting!");
-                                    Environment.Exit(-1);
-                                }
-
-                                try
-                                {
-                                    Console.WriteLine("Encrypting data");
-                                    //Gets the hash and the reduced hash of a file and then encrypts the hash
-                                    var stream = File.ReadAllBytes("PURRNext.dll");
-                                    var locker_hash = Hashing.SetHash(Encoding.ASCII.GetString(stream), false);
-
-                                    //Encrypting both, Username and Password in the process
-                                    var u = StringCipher.Encrypt(ui, locker_hash);
-                                    var p = StringCipher.Encrypt(pi, locker_hash);
-                                    LoginData = new LoginInputData(u, p); //Creates a Serializable instance of thse variables.
-
-                                    //The following process 
-                                    //Creates a file inside the Data Directory that contains both encrypted User and Password variables
-                                    //Note that this process has assigned the HASH of a file as password method of encryption for
-                                    //the login data file
-                                    //Any changes to the Hashed File will make the Login Data un-accessible.
-                                    using (StreamWriter file = File.CreateText($"{DataDir}/Serializer.json"))
-                                    {
-                                        JsonSerializer serializer = new JsonSerializer();
-                                        //serialize object directly into file stream
-                                        serializer.Formatting = Formatting.Indented;
-                                        serializer.Serialize(file, LoginData);
-                                        file.Close();//Remove in case of regret
-                                        File.Delete(LDPath); //Deletes the original login file.
-                                    }
-                                    Console.WriteLine("Done! Next time you run a search with PURR->Next you will be already logged onto e621!");
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine(ex.ToString());
-                                    Console.ReadLine();
-                                }
-
-                                Console.WriteLine("Command Finished!");
-                                Environment.Exit(1);
-                            }
-                            else
-                            {
-                                Console.WriteLine("File is lacking data, please review your input");
-                                Environment.Exit(-1);
-                            }
-
-                        }
-                        else
-                        {
-                            Console.WriteLine($"No input file could be found at - {LDPath}\n");
-                            Console.WriteLine("If you're in doubt on how to LOGIN, go to the Data directory");
-                            Console.WriteLine("and then copy the sample file with:");
-                            Console.WriteLine("\n---------------------------------------------------- -\n");
-                            Console.WriteLine("cp sample-login-input login-input.txt");
-                            Console.WriteLine("\n---------------------------------------------------- -\n");
-                            Console.WriteLine("Now you can put your info there and run the Login script again.");
-                            Console.WriteLine("Note: This same file will be deleted once the process is finished.\n");
-                            Environment.Exit(1);
-
-                        }
-                    }
-                }
 
                 //Initialize directories
                 Console.WriteLine("INITIALIZING DOCKER DIRECTORIES");
                 SetupDockerDirectories();
-
+                
                 try
                 {
-                    
-
-                    /*
-                    //Don't separate threads
-                    //Run both tasks in parallel
-                    Console.WriteLine("Initializing main thread!");
-                    var main = Task.Run(
-                    async ()=>
+                    if(args.Length > 1)
                     {
-                        
-                    });
-                    Thread mt = new Thread(main.Start);
-                    mt.Name = "Main Thread";
-                    mt.Start();
-
-                    Console.WriteLine("Initializing updater thread!");
-                    Task updater = Task.Run(
-                    async ()=>
-                    {
-                        while(true)
+                        if(args[1].Contains("login", StringComparison.CurrentCultureIgnoreCase))
                         {
-                            var update_task = Task.Run(async ()=>
+                            Console.WriteLine("Welcome to PURR->Next Docker Login Assistant");
+                            Console.WriteLine("Reminder: This argument is only used to REGISTER a user\nfor the first time!");
+                            Console.WriteLine("When we REGISTER a user, we encrypt their login data and store their data elsewhere accessible to the app!");
+                            Console.WriteLine("The input file will be deleted once the process is done!");
+                            Console.WriteLine("---------------------------------------------------- -\n");
+                            var LDPath = $"{DataDir}/login-input.txt";
+                            LoginInputData LoginData;
+
+                            if(File.Exists(LDPath))
                             {
-                                TagUpdater updtr = new TagUpdater();
-                                updtr.WithListPath(UpdatesFile);
-                                updtr.LoadTagList();
-                                var result = await updtr.UpdateTagsAsync(global_logger);
-                                if(result == true)
+                                var ui = "";
+                                var pi= "";
+                                Console.WriteLine("Found the Login file, loading data");
+                                var lines = File.ReadAllLines(LDPath);
+
+                                //We just need two lines, no more, no less, one for the password, one for the username
+                                if(lines.Length == 2)
                                 {
-                                    Console.WriteLine("All tags have been updated");
+                                    if(lines[0].Contains("U=", StringComparison.CurrentCultureIgnoreCase))
+                                    {
+                                        ui = lines[0].Replace("U=", "", StringComparison.CurrentCultureIgnoreCase); 
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("No user found, quitting!");
+                                        Environment.Exit(-1);
+                                    }
+                                    if(lines[1].Contains("P=", StringComparison.CurrentCultureIgnoreCase))
+                                    {
+                                        pi = lines[1].Replace("P=", "", StringComparison.CurrentCultureIgnoreCase); 
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("No password found, quitting!");
+                                        Environment.Exit(-1);
+                                    }
+
+                                    try
+                                    {
+                                        Console.WriteLine("Encrypting data");
+                                        //Gets the hash and the reduced hash of a file and then encrypts the hash
+                                        var stream = File.ReadAllBytes("PURRNext.dll");
+                                        var locker_hash = Hashing.SetHash(Encoding.ASCII.GetString(stream), false);
+
+                                        //Encrypting both, Username and Password in the process
+                                        var u = StringCipher.Encrypt(ui, locker_hash);
+                                        var p = StringCipher.Encrypt(pi, locker_hash);
+                                        LoginData = new LoginInputData(u, p); //Creates a Serializable instance of thse variables.
+
+                                        //The following process 
+                                        //Creates a file inside the Data Directory that contains both encrypted User and Password variables
+                                        //Note that this process has assigned the HASH of a file as password method of encryption for
+                                        //the login data file
+                                        //Any changes to the Hashed File will make the Login Data un-accessible.
+                                        using (StreamWriter file = File.CreateText($"{DataDir}/Serializer.json"))
+                                        {
+                                            JsonSerializer serializer = new JsonSerializer();
+                                            //serialize object directly into file stream
+                                            serializer.Formatting = Formatting.Indented;
+                                            serializer.Serialize(file, LoginData);
+                                            file.Close();//Remove in case of regret
+                                            File.Delete(LDPath); //Deletes the original login file.
+                                        }
+                                        Console.WriteLine("Done! Next time you run a search with PURR->Next you will be already logged onto e621!");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine(ex.ToString());
+                                        Console.ReadLine();
+                                    }
+
+                                    Console.WriteLine("Command Finished!");
+                                    Environment.Exit(1);
                                 }
                                 else
                                 {
-                                    Console.WriteLine("No tags have been update... this or some error happened, check the logs if you think an error occurred!");
+                                    Console.WriteLine("File is lacking data, please review your input");
+                                    Environment.Exit(-1);
                                 }
-                            });
-                            Task.WhenAll(update_task).Wait();
 
-                            Console.WriteLine("Sleeping -w-");
-                            await Task.Delay(TimeSpan.FromMinutes(5));
+                            }
+                            else
+                            {
+                                Console.WriteLine($"No input file could be found at - {LDPath}\n");
+                                Console.WriteLine("If you're in doubt on how to LOGIN, go to the Data directory");
+                                Console.WriteLine("and then copy the sample file with:");
+                                Console.WriteLine("\n---------------------------------------------------- -\n");
+                                Console.WriteLine("cp sample-login-input login-input.txt");
+                                Console.WriteLine("\n---------------------------------------------------- -\n");
+                                Console.WriteLine("Now you can put your info there and run the Login script again.");
+                                Console.WriteLine("Note: This same file will be deleted once the process is finished.\n");
+                                Environment.Exit(1);
+
+                            }
                         }
-                    });
-                    Thread ut = new Thread(updater.Start);
-                    ut.Name = "Updater Thread";
-                    ut.Start();
-                    
-                    Console.WriteLine("End of Runtime - Docker");
-                    Environment.Exit(0); */
+                    }
+
                     DockerMain();
                     //Parallel.Invoke(DockerMain, DockerUpdater);
 

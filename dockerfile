@@ -16,7 +16,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /PURRNext
 
 #(Test) Copies the Login script into the directory
-COPY ./InternalScripts/Login.sh /PURRNext/out
+COPY ./InternalScripts/Login.sh /PURRNext/log.sh
 
 COPY --from=build /PURRNext/out .
 ENTRYPOINT ["dotnet", "PURRNext.dll"]
