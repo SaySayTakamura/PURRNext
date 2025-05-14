@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Text;
 using Noppes.E621;
-using PURR.PostMD;
+using PURRNext.PostMD;
 using PURRNext.Configs;
 using PURRNext.DManager;
 using PURRNext.LOG;

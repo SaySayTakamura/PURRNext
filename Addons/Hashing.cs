@@ -2,7 +2,7 @@
 using System.Text;
 
 
-namespace PURR.Crypto.Hash
+namespace PURRNext.Crypto.Hash
 {
     internal class Hashing
     {

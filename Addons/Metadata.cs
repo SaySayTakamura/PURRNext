@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PURR.PostMD
+namespace PURRNext.PostMD
 {
     public class PoolData
     {

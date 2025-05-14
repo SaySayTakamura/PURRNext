@@ -1,7 +1,7 @@
 
 using System.ComponentModel;
 
-namespace NextSystems
+namespace PURRNext.NextSystems
 {
     enum StatusEnum
     {

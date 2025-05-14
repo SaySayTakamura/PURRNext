@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 
 
-namespace PURR.Watcher
+namespace PURRNext.Watcher
 {
     public class FileWatcher
     {
