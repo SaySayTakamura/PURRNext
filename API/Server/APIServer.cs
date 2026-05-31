@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using APIServer.Services;
 
 namespace APIServer
 {
+    //This will be replaced by MiniServer
     public class Server
     {
         private int defaultPort = 2048;
@@ -28,8 +30,14 @@ namespace APIServer
                 internalPort = defaultPort;
             }
             
+            //Overrides the Default IP Address, Port and Protocol used by the ASP NET Application
             builder.WebHost.UseUrls(urls: $"http://{address}:{internalPort}");
-            builder.Services.AddControllers(); //Adds management for Controllers and its actions
+            builder.Services.AddControllers() //Adds management for Controllers and its actions
+            .AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null); //?????, is this really necessary? Remove in case of regret
+
+            //Defines the entrypoint for the Database Service
+            //May replace the IndexService with a more complex DatabaseService
+            builder.Services.AddSingleton<DatabaseService>();
 
             //Allows us to set a version for the API
             builder.Services.AddApiVersioning();

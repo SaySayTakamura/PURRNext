@@ -14,6 +14,8 @@ namespace WebServer
 
         public TCPServer(int port = 4096)
         {
+			//Taken from:
+			//https://stackoverflow.com/questions/51925599/get-docker-container-ip-within-a-net-core-application
             Console.WriteLine("Initializing TCP Server - Constructor Start");
             var Name = DNS.GetHostName();
             var IP = DNS.GetHostEntry(Name).AddressList.FirstOrDefault(x=> x.AddressFamily == AddressFamily.InterNetwork);

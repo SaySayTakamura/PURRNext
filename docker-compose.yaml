@@ -1,0 +1,13 @@
+services:
+  purr-next:
+    image: purr-next-dev
+    volumes:
+      - ./Content:/PURRNext/Content
+      - ./Data:/PURRNext/Data
+    #ports:
+    #  - 5064:4096 #Live UI
+    #env_file:
+    #  - ./.env # Deprecated as paths are now hardcoded
+    command: [
+      "Docker",
+    ]

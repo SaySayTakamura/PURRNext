@@ -34,8 +34,8 @@ nunit-*.xml
 [Rr]eleasePS/
 dlldata.c
 
-.vs/**
-
+#Removes Visual Studio session artifacts
+.vs/
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
 

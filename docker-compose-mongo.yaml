@@ -1,0 +1,31 @@
+services:
+  purr-next:
+    image: purr-next-dev
+    volumes:
+      - ./Content:/PURRNext/Content
+      - ./Data:/PURRNext/Data
+    #ports:
+    #  - 5064:4096 #Live UI
+    #env_file:
+    #  - ./.env # Deprecated as paths are now hardcoded
+    command: [
+      "Docker",
+      "--db=mongo"
+    ]
+    depends_on:
+      db:
+        condition: "service_healthy"
+  db:
+    image: mongo/mongodb-community-server:latest
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongodb/data:/data/db
+      - ./mongodb/config:/data/configdb
+      - ./Scripts/DB/Setup.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 2m
+      timeout: 3s
+      retries: 4
+      start_period: 20s

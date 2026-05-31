@@ -1,7 +1,8 @@
+using APIServer.Services;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 
-namespace APIServer
+namespace APIServer.Controllers
 {
     [Route("api/{api:ApiVersion}/[Controller]")]
     [ApiController]
@@ -9,14 +10,21 @@ namespace APIServer
     public class IndexController : ControllerBase
     {
         private string _response;
+        private readonly DatabaseService Database;
 
-        public IndexController()
+        public IndexController(DatabaseService db_service)
         {
-            Console.WriteLine("Initializing Index Division");
+            //Defines the database service upon Controller Initialization
+            Console.WriteLine("Defining DATABASE");
+            Database = db_service;
+            Console.WriteLine("Done!");
+
+            Console.WriteLine("Initializing Default Response");
             _response = "<h1>IT WORKS!!!!</h1>";
             Console.WriteLine("Done!");
         }
-        [HttpGet]
+        //Defines a Test Method for returning HTML into the pipeline
+        [HttpGet("Test")]
         public ContentResult Get()
         {
             //Taken from:

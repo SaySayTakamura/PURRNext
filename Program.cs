@@ -8,6 +8,8 @@ using PURRNext.TagFile;
 using PURRNext.LoginData;
 using PURRNext.Crypto.Hash;
 using PURRNext.Crypto;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace PURRNext
 {
@@ -33,9 +35,6 @@ namespace PURRNext
 
         static bool LoadedConfigFile = false;
 
-        //True if logged onto E621
-        static bool Logged = false;
-
         //Global blacklist, loaded from file
         static List<string> GlobalBlacklist = new List<string>();
 
@@ -52,7 +51,7 @@ namespace PURRNext
                     for(int i = 0; i < Searches.Count; i++)
                     {
                         
-                        var tag_string = Searches[i].Tag;
+                        var tag_string = Searches[i].Search;
                         var tag_pages = Searches[i].Pages;
                         var tag_amount = Searches[i].Amount;
 
@@ -169,7 +168,8 @@ namespace PURRNext
             var lines = File.ReadAllLines(BlacklistFile);
             for(int i = 0; i < lines.Count(); i++)
             {
-                result.Add(lines[i]);
+                var line = lines[i].Trim();
+                result.Add(line);
             }
             return result;
         }
@@ -186,18 +186,11 @@ namespace PURRNext
 
                 builder.Append($"{modified_tag} ");
             }
+
+            //Builds the string and trims it.
             var s = builder.ToString();
-            if(s.ElementAt(s.Length-1) == ' ')
-            {
-                Console.WriteLine("Removing blank space");
-                s = s.Remove(s.Length-1);
-                result = s;
-            }
-            else
-            {
-                Console.WriteLine("No blank space found.... weird");
-                result = s;
-            }
+            result = s.Trim();
+
             return result;
         }
 
@@ -377,10 +370,34 @@ namespace PURRNext
 
                         //Display the values of the settings file
                         Console.WriteLine($"- Configuration File Version - {global_config.Version}");
+                        Console.WriteLine($"- Auto Login - {global_config.AutoLogin}");
                         Console.WriteLine($"- Save videos on their own folder - {global_config.VideoOnFolders}");
+                        Console.WriteLine($"- Save Flash Posts on their own folder - {global_config.FlashOnFolders}");
                         Console.WriteLine($"- Maximum posts to retrieve by API Call - {global_config.MaxPostsPerCall}");
                         Console.WriteLine($"- Maximum posts to retrieve by Pagination - {global_config.MaxPostsPerPage}");
+                        Console.WriteLine($"- Database Driver - {global_config.DatabaseDriver}");
+                        Console.WriteLine($"- Database Driver - {global_config.DatabasePath}");
                         Console.WriteLine($"- Last modified at - {File.GetLastWriteTime(ConfigFile).ToString("G")}\n");
+
+                        Configuration base_cfg = new Configuration();
+
+                        if (global_config.Version != base_cfg.Version)
+                        {
+                            Console.WriteLine($"Outdated config file, preparing for update\nCurrent Version: {global_config.Version}\nLatest: {base_cfg.Version}");
+                            var nCFG = base_cfg;
+                            nCFG.AutoLogin = global_config.AutoLogin;
+                            nCFG.VideoOnFolders = global_config.VideoOnFolders;
+                            nCFG.FlashOnFolders = global_config.FlashOnFolders;
+                            nCFG.MaxPostsPerCall = global_config.MaxPostsPerCall;
+                            nCFG.MaxPostsPerPage = global_config.MaxPostsPerPage;
+                            nCFG.DatabaseDriver = global_config.DatabaseDriver;
+                            nCFG.DatabasePath = global_config.DatabasePath;
+
+                            global_config = nCFG;
+                            writer.SaveConfigFile(nCFG);
+                            Console.WriteLine($"Configuration file update to version - {base_cfg.Version}");
+
+                        }
 
                         LoadedConfigFile = true;
                     }
@@ -526,7 +543,7 @@ namespace PURRNext
                 Console.WriteLine("Sample login file does not exist, creating one!");
                 using (FileStream fs = File.Create(sample_login_input_file))
                 {
-                    byte[] info = new UTF8Encoding(true).GetBytes($"U=YOUR USERNAME HERE\nP:YOUR PASSOWRD HERE");
+                    byte[] info = new UTF8Encoding(true).GetBytes($"U=YOUR USERNAME HERE\nP=YOUR PASSOWRD HERE");
                     // Add some information to the file.
                     fs.Write(info, 0, info.Length);
                     fs.Close(); //Remove in case of regret
@@ -600,6 +617,33 @@ namespace PURRNext
             {
                 //Declares a default configuration file and writer
                 Configuration cfg = new Configuration();
+
+                //Check DB Type
+                //if(Environment.GetCommandLineArgs().Contains("")
+
+                //Take this into account
+                //Link: https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/program-structure/main-command-line
+                var arg_list = Environment.GetCommandLineArgs().ToList();
+                var db = arg_list.Find(x=> x.Contains("--db="));
+                if(db != null)
+                {
+                    Console.WriteLine("Intercepted database command line argument");
+                    db = db.Trim().ToLower();
+                    if(db == "mongo")
+                    {
+                        Console.WriteLine("Selected DB - MongoDB");
+                        cfg.DatabaseDriver = "MONGO";
+                        cfg.DatabasePath = "mongodb://repoUser:996854@db:27017";
+                        Console.WriteLine("Assigned mongodb instance path and Driver\nInstance URL: db:27017\nNote that you need to change 'db' your host address so you can access it from other sources");
+                    }else if(db == "sql")
+                    {
+                        Console.WriteLine("Selected DB - SQLite");
+                        cfg.DatabaseDriver = "SQL";
+                        cfg.DatabasePath = $"{data_path}/db.sqlite";
+                        Console.WriteLine("Assigned mongodb instance path and Driver\nInstance URL: db:27017\nNote that you need to change 'db' your host address so you can access it from other sources");
+                    }
+                }
+
                 ConfigurationWriter c_wrtr = new ConfigurationWriter();
 
                 Console.WriteLine("Configuration file does not exist, creating one!");
@@ -669,7 +713,7 @@ namespace PURRNext
             Console.WriteLine("-------------------------------------------------- --    -\n");
 
             Console.WriteLine("     PURR NEXT - An E621 CLI BACKEND (WIP)");
-            Console.WriteLine("     VERSION - 0.0.1");
+            Console.WriteLine("     VERSION - 0.8.5");
             Console.WriteLine("     Author: Edgar Takamura");
 
             Console.WriteLine("\n-------------------------------------------------- --    -");
@@ -684,6 +728,8 @@ namespace PURRNext
                 var result = Greet.Replace("U=", "", StringComparison.CurrentCultureIgnoreCase);
                 Console.WriteLine(result);
             } */
+
+
 
             //Main Runtime
             var topic = "";
@@ -706,87 +752,91 @@ namespace PURRNext
                     var result_tags = "";
                     if(global_config.TagsFromFile == true)
                     {
+//Label - Topic 1: Prompt Checkpoint 0
+T1_PROMPT_CHECKPOINT_0:
                         Console.WriteLine("You've set to use a file for storing your tags, do you want to use it for your search? - [Y/N]");
+                        
                         var response = Console.ReadLine();
+                        response = response.ToLower();
+                        response = response.Trim();
 
-                        if(response == "Y" || response == "y")
+                        //Checks the response
+                        if(response == "y" || response == "yes")
                         {
                             Console.WriteLine("Okie dokie proceeding then");
-                            goto limit1;
+                            goto T1_LIMIT_CHECKPOINT;
                         }
-                        else if(response == "N" || response == "n")
+                        else if(response == "n" || response == "no")
                         {
                             Console.WriteLine("Okay then!");
-                            goto tg1;
+                            //Goto directine not needed, please uncomment this if something goes wrong.
+                            //goto fl_tg1;
                         }
-                        else if(response == "YES" || response == "yes")
+                        else
                         {
-                            Console.WriteLine("Okie dokie proceeding then");
-                            goto limit1;
-                        }
-                        else if(response == "NO" || response == "no")
-                        {
-                            Console.WriteLine("Okay then!");
-                            goto tg1;
+                            Console.WriteLine("Invalid response, try again");
+                            goto T1_PROMPT_CHECKPOINT_0;
                         }
                     }
                     else
                     {
-                        Console.WriteLine("Tags from File feature not enable, proceeding");
+                        Console.WriteLine("Tags from File feature not enabled, proceeding");
                     }
 
-                    tg1:
-                        Console.WriteLine("Just type your tags below and press enter to begin your search!");
-                        var tags = Console.ReadLine();
+//Label - Topic 1: Tag Checkpoint
+T1_TAG_CHECKPOINT:
+                    Console.WriteLine("Just type your tags below and press enter to begin your search!");
+                    var tags = Console.ReadLine();
+                    //Trims the whole string so it doesn't have any Whitespaces on either ends
+                    //The string should be trimmed to avoid empty-spaced strings which results
+                    //on dumping the e6's front page on the root of the sessions directory.
+                    tags = tags.Trim();
 
-                        Console.WriteLine("Checking for blank spaces");
-                        if(tags.Length != 0)
-                        {
-                            if(tags.ElementAt(tags.Length-1) == ' ')
-                            {
-                                Console.WriteLine("Blank space found on string end, removing");
-                                tags = tags.Remove(tags.Length-1);
-                            }
-                            else
-                            {
-                                Console.WriteLine("No blank space, congrats");
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Tags can't be empty, try again");
-                            Environment.Exit(0);
-                            
-                        }
-                    
+
+                    if(tags.Length != 0)
+                    {
+                        
+                        //Splits the whole string, remove inbetween whitespaces and trim the entries
+                        var tag_list = tags.Split(' ', options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+                        //Joins the string back into a single string
+                        tags = string.Join(" ", tag_list);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Tags can't be empty, try again");
+                        Environment.Exit(0);
+                        Console.ReadLine();
+                    }
+//Label - Topic 1: Prompt Checkpoint 1
+T1_PROMPT_CHECKPOINT_1:
                     Console.WriteLine($"Those are your tags: {tags}");
                     Console.WriteLine("Do you confirm?");
                     var confirm = Console.ReadLine();
 
-                    if(confirm == "Y" || confirm == "y")
-                    {
-                        Console.WriteLine("Okie dokie proceeding then");
-                        result_tags = tags;
-                    }
-                    else if(confirm == "N" || confirm == "n")
-                    {
-                        Console.WriteLine("Okay then!");
-                        goto tg1;
-                    }
-                    else if(confirm == "YES" || confirm == "yes")
-                    {
-                        Console.WriteLine("Okie dokie proceeding then");
-                        result_tags = tags;
-                    }
-                    else if(confirm == "NO" || confirm == "no")
-                    {
-                        Console.WriteLine("Okay then!");
-                        goto tg1;
-                    }
+                    //Sets the whole string to lowercase to generalize the result and make code more simple
+                    confirm = confirm.ToLower(); 
 
-                    limit1:
+                    //Checks the response, the user can quit from here as well
+                    if(confirm == "y" || confirm == "yes")
+                    {
+                        Console.WriteLine("Okie dokie proceeding then");
+                        result_tags = tags;
+                    }
+                    else if(confirm == "n" || confirm == "no")
+                    {
+                        Console.WriteLine("Okay then, let's try again!");
+                        goto T1_TAG_CHECKPOINT;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid response, try again");
+                        goto T1_PROMPT_CHECKPOINT_1;
+                    }
+//Label - Topic 1: Limit Checkpoint
+T1_LIMIT_CHECKPOINT:
                     Console.WriteLine("The app will be using a limit for fetching posts!");
-                    Console.WriteLine("You can change this limit whenever you want by changing the 'config.json' fike");
+                    Console.WriteLine("You can change this limit whenever you want by changing the 'config.json' file.");
 
                     Console.WriteLine("- STAAARTING -");
 
@@ -818,7 +868,7 @@ namespace PURRNext
                     }
 
                     var e621Client = new E621ClientBuilder()
-                    .WithUserAgent("PURRNext - An E621 CLI BACKEND", "0.01", "EdgarTakamura", "Bluesky")
+                    .WithUserAgent("PURRNext - An E621 CLI BACKEND", "0.05b", "EdgarTakamura", "Bluesky")
                     .WithMaximumConnections(E621Constants.MaximumConnectionsLimit)
                     .WithRequestInterval(E621Constants.MinimumRequestInterval)
                     .Build();
@@ -835,95 +885,104 @@ namespace PURRNext
                     var result_tags = "";
                     if(global_config.TagsFromFile == true)
                     {
+//Label - Topic 2: Prompt Checkpoint 0
+T2_PROMPT_CHECKPOINT_0:
                         Console.WriteLine("You've set to use a file for storing your tags, do you want to use it for your search? - [Y/N]");
                         var response = Console.ReadLine();
-
-                        if(response == "Y" || response == "y")
+                        response = response.ToLower();
+                        response = response.Trim();
+                        //Checks the response
+                        if(response == "y" || response == "yes")
                         {
                             Console.WriteLine("Okie dokie proceeding then");
-                            goto limit1;
+                            goto T2_LIMIT_CHECKPOINT;
                         }
-                        else if(response == "N" || response == "n")
+                        else if(response == "n" || response == "no")
                         {
                             Console.WriteLine("Okay then!");
-                            goto tg1;
+                            //Goto directine not needed, please uncomment this if something goes wrong.
+                            //goto fl_tg2;
                         }
-                        else if(response == "YES" || response == "yes")
+                        else
                         {
-                            Console.WriteLine("Okie dokie proceeding then");
-                            goto limit1;
-                        }
-                        else if(response == "NO" || response == "no")
-                        {
-                            Console.WriteLine("Okay then!");
-                            goto tg1;
+                            Console.WriteLine("Invalid response, try again");
+                            goto T2_PROMPT_CHECKPOINT_0;
                         }
                     }
                     else
                     {
-                        Console.WriteLine("Tags from File feature not enable, proceeding");
+                        Console.WriteLine("Tags from File feature not enabled, proceeding");
+                    }
+//Label - Topic 2: Tag Checkpoint
+T2_TAG_CHECKPOINT:
+                    Console.WriteLine("Just type your tags below and press enter to begin your search!");
+                    var tags = Console.ReadLine();
+
+                    /*  
+                        Trims the whole string so it doesn't have any Whitespaces on either ends
+                        The string should be trimmed before checking to avoid empty-spaced strings which results
+                        on dumping the e6's front page on the root of the sessions directory.
+                    */
+                    tags = tags.Trim();
+
+                    if(tags.Length != 0)
+                    {
+
+                        //Splits the whole string, remove inbetween whitespaces and trim the entries
+                        var tag_list = tags.Split(' ', options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+                        //Joins the string back into a single string
+                        tags = string.Join(" ", tag_list);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Tags can't be empty, try again");
+                        //Use for testing
+                        //Environment.Exit(0);
                     }
 
-                    tg1:
-                        Console.WriteLine("Just type your tags below and press enter to begin your search!");
-                        var tags = Console.ReadLine();
-
-                        Console.WriteLine("Checking for blank spaces");
-                        if(tags.Length != 0)
-                        {
-                            if(tags.ElementAt(tags.Length-1) == ' ')
-                            {
-                                Console.WriteLine("Blank space found on string end, removing");
-                                tags = tags.Remove(tags.Length-1);
-                            }
-                            else
-                            {
-                                Console.WriteLine("No blank space, congrats");
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Tags can't be empty, try again");
-                            Environment.Exit(0);
-                            
-                        }
-                    
+/*
+    I could use "T2_TAG_CHECKPOINT_0" for this, but i felt that going back all the way and being forced to 
+    REWRITE your tags again would be tiresome/unecessary, so we only go back to THIS prompt and if the user really wants
+    to REWRITE his tags, he can simply say "No" or "N"          
+*/
+//Label - Topic 2: Prompt Checkpoint 1
+T2_PROMPT_CHECKPOINT_1:
                     Console.WriteLine($"Those are your tags: {tags}");
                     Console.WriteLine("Do you confirm?");
                     var confirm = Console.ReadLine();
 
-                    if(confirm == "Y" || confirm == "y")
+                    //Sets the whole string to lowercase to generalize the result and make code more simple
+                    confirm = confirm.ToLower(); 
+
+                    //Checks the response, the user can quit from here as well
+                    if(confirm == "y" || confirm == "yes")
                     {
                         Console.WriteLine("Okie dokie proceeding then");
                         result_tags = tags;
                     }
-                    else if(confirm == "N" || confirm == "n")
+                    else if(confirm == "n" || confirm == "no")
                     {
-                        Console.WriteLine("Okay then!");
-                        goto tg1;
+                        Console.WriteLine("Okay then, let's try again!");
+                        goto T2_TAG_CHECKPOINT;
                     }
-                    else if(confirm == "YES" || confirm == "yes")
+                    else
                     {
-                        Console.WriteLine("Okie dokie proceeding then");
-                        result_tags = tags;
+                        Console.WriteLine("Invalid response, try again");
+                        goto T2_PROMPT_CHECKPOINT_1;
                     }
-                    else if(confirm == "NO" || confirm == "no")
-                    {
-                        Console.WriteLine("Okay then!");
-                        goto tg1;
-                    }
-
-
-                    limit1:
+//Label - Topic 2: Limit Checkpoint 1
+T2_LIMIT_CHECKPOINT:
                     Console.WriteLine("The app will be using a limit for fetching posts!");
-                    Console.WriteLine("You can change this limit whenever you want by changing the 'config.json' fike");
+                    Console.WriteLine("You can change this limit whenever you want by changing the 'config.json' file.");
 
-                    Console.WriteLine("BUT WAIT A SECOND!!");
-
-                    p_select:
+//Label - Topic 2: Pagination Checkpoint
+T2_PAGE_SELECT_CHECKPOINT:
                     Console.WriteLine("This mode accepts pagination, how many pages you want to search on?");
                     var pages = Int32.Parse(Console.ReadLine());
 
+                    //Aesthetic Text
+                    //Remove as needed
                     if(pages >= 20)
                     {
                         Console.WriteLine("Woah, that's a lot of posts >w>");
@@ -932,26 +991,34 @@ namespace PURRNext
                     {
                         Console.WriteLine("Wooow, lotsa posts to download +w+");
                     }
+                    else if(pages <= 0)
+                    {
+                        Console.WriteLine("The page parameter must be more than 0");
+                        Console.WriteLine("Reverting...");
+                        goto T2_PAGE_SELECT_CHECKPOINT;
+                    }
+
+//Label - Topic 2: Prompt Checkpoint 1
+T2_PROMPT_CHECKPOINT_2:
                     Console.WriteLine("Do you confirm?");
                     var confirm_pages = Console.ReadLine();
 
-                    if(confirm_pages == "Y" || confirm_pages == "y")
+                    //Sets the whole string to lowercase to generalize the result and make code more simple
+                    confirm_pages.ToLower();
+
+                    if(confirm_pages == "y" || confirm_pages == "yes")
                     {
                         Console.WriteLine("Okie dokie proceeding then");
                     }
-                    else if(confirm_pages == "N" || confirm_pages == "n")
+                    else if(confirm_pages == "n" || confirm_pages == "no")
                     {
                         Console.WriteLine("Okay then!");
-                        goto p_select;
+                        goto T2_PAGE_SELECT_CHECKPOINT;
                     }
-                    else if(confirm_pages == "YES" || confirm_pages == "yes")
+                    else
                     {
-                        Console.WriteLine("Okie dokie proceeding then");
-                    }
-                    else if(confirm_pages == "NO" || confirm_pages == "no")
-                    {
-                        Console.WriteLine("Okay then!");
-                        goto p_select;
+                        Console.WriteLine("Invalid response, try again");
+                        goto T2_PROMPT_CHECKPOINT_2;
                     }
 
                     Console.WriteLine("- STAAARTING -");
@@ -989,11 +1056,250 @@ namespace PURRNext
                     .WithRequestInterval(E621Constants.MinimumRequestInterval)
                     .Build();
 
+                    Console.WriteLine("Before proceeding...");
+
+                    if(!File.Exists("./Serializer.json"))
+                    {
+//Label - Topic 2: Login Prompt Checkpoint
+T2_PROMPT_CHECKPOINT_3:
+                        Console.WriteLine("Do you want to login with your account?");
+                        var login_request = Console.ReadLine();
+                        LoginInputData LoginData;
+
+                        //Sets the whole string to lowercase to generalize the result and make code more simple
+                        login_request = login_request.ToLower(); 
+
+                        //Checks the response, the user can quit from here as well
+                        if(login_request == "y" || login_request == "yes")
+                        {
+                            Console.WriteLine("Great!");
+                            Console.WriteLine("First, please input your username");
+//Label - Topic 2: Username Input Checkpoint 1
+T2_USERNAME_INPUT_CHECKPOINT:
+                            Console.WriteLine("Username: "); 
+                            var username = Console.ReadLine();
+                            username = username.Trim();
+
+                            if(username.Length == 0)
+                            {
+                                Console.WriteLine("Invalid username, please try again!");
+                                goto T2_USERNAME_INPUT_CHECKPOINT;
+                            }
+
+                            Console.WriteLine($"Now input the API key for the user - {username}");
+//Label - Topic 2: Password Input Checkpoint
+T2_PASSWORD_INPUT_CHECKPOINT:
+                            var apk = "";
+                            while (true)
+                            {
+                                var key = Console.ReadKey(true);
+                                if (key.Key == ConsoleKey.Enter)
+                                {
+                                    Console.Write("\n");
+
+                                    break;
+                                }
+                                if (key.Key != ConsoleKey.Backspace)
+                                {
+                                    Console.Write("*");
+                                    apk += key.KeyChar;
+                                }
+                                else
+                                {
+                                    if (apk.Length != 0)
+                                    {
+                                        Console.Write("\b \b");
+                                        apk = apk.Remove(apk.Length - 1);
+                                    }
+                                }
+                            }
+                            apk = apk.Trim();
+
+                            if(apk.Length == 0)
+                            {
+                                Console.WriteLine("Invalid password/API Key, please try again!");
+                                goto T2_PASSWORD_INPUT_CHECKPOINT;
+                            }
+//Label - Topic 2: Credentials Save Prompt Checkpoint 
+T2_PROMPT_CHECKPOINT_4:
+                            Console.WriteLine("Great, would you like to save your credentials?");
+                            Console.WriteLine("Everything will be encrypted to avoid issues");
+                            Console.WriteLine("Note that this also enables auto-login.");
+
+                            var save_creds = Console.ReadLine();
+                            
+                            //Sets the whole string to lowercase to generalize the result and make code more simple
+                            save_creds = save_creds.ToLower(); 
+
+                            //Checks the response, the user can quit from here as well
+                            if(save_creds == "y" || save_creds == "yes")
+                            {
+                                Console.WriteLine("Okay, please input a master password for encryption");
+
+                                var mp = "";
+                                while (true)
+                                {
+                                    var key = Console.ReadKey(true);
+                                    if (key.Key == ConsoleKey.Enter)
+                                    {
+                                        Console.Write("\n");
+
+                                        break;
+                                    }
+                                    if (key.Key != ConsoleKey.Backspace)
+                                    {
+                                        Console.Write("*");
+                                        mp += key.KeyChar;
+                                    }
+                                    else
+                                    {
+                                        if (mp.Length != 0)
+                                        {
+                                            Console.Write("\b \b");
+                                            mp = mp.Remove(mp.Length - 1);
+                                        }
+                                    }
+                                }
+                                mp = mp.Trim();
+
+                                Console.WriteLine("Testing connection with available credentials");
+                                var log = e621Client.LogInAsync(username, apk);
+                                log.Wait();
+
+                                //Check for success to login with the currently available credentials
+                                var log_success = log.Result;
+                                if (log_success)
+                                {
+                                    Console.WriteLine("Success! You are logged for this session");
+                                    Console.WriteLine("Your credentials will now be saved!");
+
+                                    var mp_hash = Hashing.SetHash(mp);
+                                    var encrypted_usrnm = StringCipher.Encrypt(username, mp_hash);
+                                    var encrypted_apk = StringCipher.Encrypt(apk, mp_hash);
+                                    LoginData = new LoginInputData(encrypted_usrnm, encrypted_apk, mp_hash);
+
+
+                                    //Sets options for the serializers
+                                    /*
+                                    System.Text.Json.JsonSerializerOptions opts = new()
+                                    {
+                                        IncludeFields = true
+                                    };
+                                    */
+
+                                    //var op = System.Text.Json.JsonSerializer.Serialize(LoginData, options: opts);
+                                    var op = JsonConvert.SerializeObject(LoginData);
+                                    var ss = RandomNumberGenerator.Create().GetHashCode();
+                                    var eop = StringCipher.Encrypt(op, $"{ss}");
+
+                                    using (StreamWriter file = File.CreateText($"{WorkDir}/Serializer.json"))
+                                    {
+                                        file.Write($"{ss}|/|{eop}");
+                                        file.Close();//Remove in case of regret
+                                    }
+
+                                    Console.WriteLine("Done! Your credentials are now saved");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("An error has occurred");
+                                    Console.WriteLine("Please, try again later.");
+
+                                }
+
+                            }
+                            else if(save_creds == "n" || save_creds == "no")
+                            {
+                                Console.WriteLine("Okay, but if you want to login you will need to input all your credentials again");
+                                Console.WriteLine("An attempt on loging will now be processed");
+                                var log = e621Client.LogInAsync(username, apk);
+                                log.Wait();
+
+                                //Check for success to login with the currently available credentials
+                                var log_success = log.Result;
+                                if (log_success)
+                                {
+                                    Console.WriteLine("Success! You are logged for this session");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Failure! An issue occurred while trying to login to e621");
+                                    Console.WriteLine("Check e621 status or try again later");
+                                    Console.ReadLine();
+                                    Environment.Exit(621);
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("Invalid response, try again");
+                                goto T2_PROMPT_CHECKPOINT_4;
+                            }
+
+                        }
+                        else if(login_request == "n" || login_request == "no")
+                        {
+                            Console.WriteLine("Okay then, proceeding.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid response, try again");
+                            goto T2_PROMPT_CHECKPOINT_3;
+                        }
+                    
+                    }
+                    else
+                    {
+                        if(global_config.AutoLogin == true)
+                        {
+                            Console.WriteLine("Auto-Login File found, loging in");
+                            var line = File.ReadAllLines($"{WorkDir}/Serializer.json")[0];
+                            var match = Regex.Match(line, @"(.+?)\|\/\|(.+)");
+
+                            if(match.Success)
+                            {
+                                Console.WriteLine("Match found");
+                                var key = match.Groups[1].Value;
+                                var content = match.Groups[2].Value;
+                                //Console.WriteLine($"K: {key}\nContent: {content}");
+                                //Console.WriteLine("Decrypting");
+                                var ld = StringCipher.Decrypt(content, key);
+                                var ldc = JsonConvert.DeserializeObject<LoginInputData>(ld);
+                                //Console.WriteLine($"LDCC:\nUsername: {ldc.Username}\nPass: {ldc.Password}\nMN: {ldc.MagicNumber}");
+                                var dpu = StringCipher.Decrypt(ldc.Username, ldc.MagicNumber);
+                                var dpp = StringCipher.Decrypt(ldc.Password, ldc.MagicNumber);
+
+                                var l = e621Client.LogInAsync(dpu, dpp);
+                                l.Wait();
+                                if(l.Result == true)
+                                {
+                                    Console.WriteLine("Login from file succeeded");
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("Invalid Regex Try Again");
+                                Console.ReadLine();
+                                Environment.Exit(0);
+                            }
+                        }
+                        else
+                        {
+//T2_PROMPT_CHECKPOINT_5:
+                            Console.WriteLine("Credentials File found but Auto-Login is disabled");
+                            Console.WriteLine("Enable Auto-Login or Dismiss this message if you don't want to login.");
+
+                        }
+                    }
+                    Console.WriteLine("Proceeding");
+
+                    DatabaseContext db = new DatabaseContext(global_config.DatabaseDriver, global_config.DatabasePath);
+
                     Fetcher fetcher = new Fetcher(e621Client, result_tags, pages);
                     fetcher.AssignLoggerInstance(global_logger);
                     fetcher.AssignConfigurationFile(global_config);
                     fetcher.AssignOutputDir(SessionOutput);
                     fetcher.AssignBlacklistString(backup_list_string);
+                    fetcher.AssignDatabaseContext(db);
                     fetcher.Start();
                 }
 
@@ -1059,72 +1365,77 @@ namespace PURRNext
                                 var ui = "";
                                 var pi= "";
                                 Console.WriteLine("Found the Login file, loading data");
-                                var lines = File.ReadAllLines(LDPath);
+                                //var lines = File.ReadAllLines(LDPath);
 
-                                //We just need two lines, no more, no less, one for the password, one for the username
-                                if(lines.Length == 2)
+                                var text = File.ReadAllText(LDPath);
+                                text = text.Trim();
+                                Console.WriteLine($"Loaded - {text.Replace("\r", "\\r").Replace("\n", "\\n")}");
+                                var reg = Regex.Match(text, @"U=(.+?)\r\nP=(.+)");
+                                if(reg.Success)
                                 {
-                                    if(lines[0].Contains("U=", StringComparison.CurrentCultureIgnoreCase))
-                                    {
-                                        ui = lines[0].Replace("U=", "", StringComparison.CurrentCultureIgnoreCase); 
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("No user found, quitting!");
-                                        Environment.Exit(-1);
-                                    }
-                                    if(lines[1].Contains("P=", StringComparison.CurrentCultureIgnoreCase))
-                                    {
-                                        pi = lines[1].Replace("P=", "", StringComparison.CurrentCultureIgnoreCase); 
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("No password found, quitting!");
-                                        Environment.Exit(-1);
-                                    }
-
-                                    try
-                                    {
-                                        Console.WriteLine("Encrypting data");
-                                        //Gets the hash and the reduced hash of a file and then encrypts the hash
-                                        var stream = File.ReadAllBytes("PURRNext.dll");
-                                        var locker_hash = Hashing.SetHash(Encoding.ASCII.GetString(stream), false);
-
-                                        //Encrypting both, Username and Password in the process
-                                        var u = StringCipher.Encrypt(ui, locker_hash);
-                                        var p = StringCipher.Encrypt(pi, locker_hash);
-                                        LoginData = new LoginInputData(u, p); //Creates a Serializable instance of thse variables.
-
-                                        //The following process 
-                                        //Creates a file inside the Data Directory that contains both encrypted User and Password variables
-                                        //Note that this process has assigned the HASH of a file as password method of encryption for
-                                        //the login data file
-                                        //Any changes to the Hashed File will make the Login Data un-accessible.
-                                        using (StreamWriter file = File.CreateText($"{DataDir}/Serializer.json"))
-                                        {
-                                            JsonSerializer serializer = new JsonSerializer();
-                                            //serialize object directly into file stream
-                                            serializer.Formatting = Formatting.Indented;
-                                            serializer.Serialize(file, LoginData);
-                                            file.Close();//Remove in case of regret
-                                            File.Delete(LDPath); //Deletes the original login file.
-                                        }
-                                        Console.WriteLine("Done! Next time you run a search with PURR->Next you will be already logged onto e621!");
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Console.WriteLine(ex.ToString());
-                                        Console.ReadLine();
-                                    }
-
-                                    Console.WriteLine("Command Finished!");
-                                    Environment.Exit(1);
+                                    Console.WriteLine("Captured");
+                                    Console.WriteLine($"U={reg.Groups[1].Value}");
+                                    Console.WriteLine($"P={reg.Groups[2].Value}");
+                                    ui = reg.Groups[1].Value;
+                                    pi = reg.Groups[2].Value;
                                 }
                                 else
                                 {
-                                    Console.WriteLine("File is lacking data, please review your input");
-                                    Environment.Exit(-1);
+                                    Console.WriteLine("Login input file malformed or corrupt! Try again.");
+                                    Environment.Exit(77);
                                 }
+
+                                //Encrypts input data
+                                try
+                                {
+                                    Console.WriteLine("Encrypting data");
+                                    //Uses a RNG to create a master password to avoid user Input
+                                    var enc_code = RandomNumberGenerator.Create().GetHashCode().ToString();
+                                    var locker_hash = Hashing.SetHash(enc_code, false);
+
+                                    //Encrypts both, Username and Password
+                                    var u = StringCipher.Encrypt(ui, locker_hash);
+                                    var p = StringCipher.Encrypt(pi, locker_hash);
+                                    LoginData = new LoginInputData(u, p, locker_hash); //Creates a Serializable instance of thse variables.
+
+                                    var op = JsonConvert.SerializeObject(LoginData);
+                                    var ss = RandomNumberGenerator.Create().GetHashCode();
+                                    var eop = StringCipher.Encrypt(op, $"{ss}");
+
+                                    using (StreamWriter file = File.CreateText($"{DataDir}/Serializer.json"))
+                                    {
+                                        file.Write($"{ss}|/|{eop}");
+                                        file.Close();//Remove in case of regret
+                                    }
+
+                                    Console.WriteLine("Done! Your credentials are now saved");
+
+                                    //The following process 
+                                    //Creates a file inside the Data Directory that contains both encrypted User and Password variables
+                                    //Note that this process has assigned the HASH of a file as password method of encryption for
+                                    //the login data file
+                                    //Any changes to the Hashed File will make the Login Data un-accessible.
+                                    /*
+                                    using (StreamWriter file = File.CreateText($"{DataDir}/Serializer.json"))
+                                    {
+                                        JsonSerializer serializer = new JsonSerializer();
+                                        //serialize object directly into file stream
+                                        serializer.Formatting = Formatting.Indented;
+                                        serializer.Serialize(file, LoginData);
+                                        file.Close();//Remove in case of regret
+                                        File.Delete(LDPath); //Deletes the original login file.
+                                    }
+                                    */
+                                    Console.WriteLine("Done! Next time you run a search with PURR->Next you will be already logged onto e621!");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine(ex.ToString());
+                                    Console.ReadLine();
+                                }
+
+                                Console.WriteLine("Command Finished!");
+                                Environment.Exit(1);
 
                             }
                             else

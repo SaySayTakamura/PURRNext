@@ -39,9 +39,11 @@ namespace PURRNext.DManager
 
             for(int i = 0; i < post.Count; i++)
             {
-                DownloadItem item = new DownloadItem();
-                item.STATUS = "Pending";
-                item.post = post[i];
+                DownloadItem item = new()
+                {
+                    STATUS = "Pending",
+                    post = post[i]
+                };
                 items.Add(item);
             }
         }
