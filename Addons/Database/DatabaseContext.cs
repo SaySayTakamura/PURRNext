@@ -47,6 +47,10 @@ public class DatabaseContext
             Console.ReadLine();
         }
     }
+    public string GetDriverName()
+    {
+        return dbDriver;
+    }
 #region POSTS
     public async Task<bool> PostExists(string id)
     {

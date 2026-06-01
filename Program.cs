@@ -98,13 +98,18 @@ namespace PURRNext
                             {
                                 Console.WriteLine("Login file detected!");
 
+                                var line = File.ReadAllLines($"{WorkDir}/Serializer.json")[0];
+                                var match = Regex.Match(line, @"(.+?)\|\/\|(.+)");
 
-
-                                using (StreamReader r = new StreamReader($"{DataDir}/Serializer.json"))
+                                if(match.Success)
                                 {
-
-                                    string json = r.ReadToEnd();
-                                    var data = JsonConvert.DeserializeObject<LoginInputData>(json);
+                                    Console.WriteLine("Match found");
+                                    var key = match.Groups[1].Value;
+                                    var content = match.Groups[2].Value;
+                                    //Console.WriteLine($"K: {key}\nContent: {content}");
+                                    //Console.WriteLine("Decrypting");
+                                    var ldi = StringCipher.Decrypt(content, key);
+                                    var data = JsonConvert.DeserializeObject<LoginInputData>(ldi);
                                     var u = StringCipher.Decrypt(data.Username, data.MagicNumber);
                                     var p = StringCipher.Decrypt(data.Password, data.MagicNumber);
 
@@ -120,6 +125,10 @@ namespace PURRNext
                                     {
                                         Console.WriteLine("Something Went Wrong");
                                     }
+                                }
+                                else
+                                {
+                                    Console.WriteLine("An issue has occurred when parsing login file.");
                                 }
                             }
                             else
@@ -635,7 +644,7 @@ namespace PURRNext
                         Console.WriteLine("Selected DB - MongoDB");
                         cfg.DatabaseDriver = "MONGO";
                         cfg.DatabasePath = "mongodb://SERVER:996854@db:27017";
-                        Console.WriteLine("Assigned mongodb instance path and Driver\nInstance URL: db:27017\nNote that you need to change 'db' your host address so you can access it from other sources");
+                        Console.WriteLine("Assigned mongodb instance path and Driver\nInstance URL: db:27017\nNote that you need to change 'db' to your host address so you can access it from other sources");
                     }else if(db == "sql")
                     {
                         Console.WriteLine("Selected DB - SQLite");
@@ -1458,6 +1467,9 @@ T2_PROMPT_CHECKPOINT_4:
                                     }
                                     */
                                     Console.WriteLine("Done! Next time you run a search with PURR->Next you will be already logged onto e621!");
+                                    Console.WriteLine("Deleting input file...");
+                                    File.Delete(LDPath);
+                                    Console.WriteLine("Input file deleted!");
                                 }
                                 catch (Exception ex)
                                 {
