@@ -1,3 +1,4 @@
+#!/bin/bash
 #This scripts calls PURRNext with the Login argument
 #This will display informations about the Login process
 echo "-- Executing Script --"

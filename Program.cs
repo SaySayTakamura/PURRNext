@@ -40,6 +40,7 @@ namespace PURRNext
 
         static void DockerMain()
         {
+            DatabaseContext db = new DatabaseContext(global_config.DatabaseDriver, global_config.DatabasePath);
             while(true)
             {
                 //Loads the Tags file and check for the amount of returned tags
@@ -97,16 +98,15 @@ namespace PURRNext
                             {
                                 Console.WriteLine("Login file detected!");
 
-                                var stream = File.ReadAllBytes("PURRNext.dll");
-                                var rash_pass = Hashing.SetHash(Encoding.ASCII.GetString(stream), false);
+
 
                                 using (StreamReader r = new StreamReader($"{DataDir}/Serializer.json"))
                                 {
 
                                     string json = r.ReadToEnd();
                                     var data = JsonConvert.DeserializeObject<LoginInputData>(json);
-                                    var u = StringCipher.Decrypt(data.Username, rash_pass);
-                                    var p = StringCipher.Decrypt(data.Password, rash_pass);
+                                    var u = StringCipher.Decrypt(data.Username, data.MagicNumber);
+                                    var p = StringCipher.Decrypt(data.Password, data.MagicNumber);
 
                                     Console.WriteLine("Logging in!");
 
@@ -129,6 +129,7 @@ namespace PURRNext
 
                             Fetcher fetcher = new Fetcher(e621Client, tag_string, tag_pages);
                             fetcher.AssignLoggerInstance(global_logger);
+                            fetcher.AssignDatabaseContext(db);
                             fetcher.AssignConfigurationFile(global_config);
                             fetcher.AssignOutputDir(SessionOutput);
                             fetcher.AssignBlacklistString(backup_list_string);
@@ -377,7 +378,7 @@ namespace PURRNext
                         Console.WriteLine($"- Maximum posts to retrieve by Pagination - {global_config.MaxPostsPerPage}");
                         Console.WriteLine($"- Database Driver - {global_config.DatabaseDriver}");
                         Console.WriteLine($"- Database Driver - {global_config.DatabasePath}");
-                        Console.WriteLine($"- Last modified at - {File.GetLastWriteTime(ConfigFile).ToString("G")}\n");
+                        Console.WriteLine($"- Last modified at - {File.GetLastWriteTime(ConfigFile).ToString("G")}");
 
                         Configuration base_cfg = new Configuration();
 
@@ -628,12 +629,12 @@ namespace PURRNext
                 if(db != null)
                 {
                     Console.WriteLine("Intercepted database command line argument");
-                    db = db.Trim().ToLower();
+                    db = db.Trim().ToLower().Replace("--db=","").Trim();
                     if(db == "mongo")
                     {
                         Console.WriteLine("Selected DB - MongoDB");
                         cfg.DatabaseDriver = "MONGO";
-                        cfg.DatabasePath = "mongodb://repoUser:996854@db:27017";
+                        cfg.DatabasePath = "mongodb://SERVER:996854@db:27017";
                         Console.WriteLine("Assigned mongodb instance path and Driver\nInstance URL: db:27017\nNote that you need to change 'db' your host address so you can access it from other sources");
                     }else if(db == "sql")
                     {
@@ -641,6 +642,10 @@ namespace PURRNext
                         cfg.DatabaseDriver = "SQL";
                         cfg.DatabasePath = $"{data_path}/db.sqlite";
                         Console.WriteLine("Assigned mongodb instance path and Driver\nInstance URL: db:27017\nNote that you need to change 'db' your host address so you can access it from other sources");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Invalid DB Driver, check your the entrypoint arguments and try again!\nProvided DB Driver vie entrypoint argument: {db}");
                     }
                 }
 
@@ -673,10 +678,34 @@ namespace PURRNext
 
                         //Display the values of the settings file
                         Console.WriteLine($"- Configuration File Version - {global_config.Version}");
+                        Console.WriteLine($"- Auto Login - {global_config.AutoLogin}");
                         Console.WriteLine($"- Save videos on their own folder - {global_config.VideoOnFolders}");
+                        Console.WriteLine($"- Save Flash Posts on their own folder - {global_config.FlashOnFolders}");
                         Console.WriteLine($"- Maximum posts to retrieve by API Call - {global_config.MaxPostsPerCall}");
                         Console.WriteLine($"- Maximum posts to retrieve by Pagination - {global_config.MaxPostsPerPage}");
-                        Console.WriteLine($"- Last modified at - {File.GetLastWriteTime(ConfigFile).ToString("G")}\n");
+                        Console.WriteLine($"- Database Driver - {global_config.DatabaseDriver}");
+                        Console.WriteLine($"- Database Driver - {global_config.DatabasePath}");
+                        Console.WriteLine($"- Last modified at - {File.GetLastWriteTime(ConfigFile).ToString("G")}");
+
+                        Configuration base_cfg = new Configuration();
+
+                        if (global_config.Version != base_cfg.Version)
+                        {
+                            Console.WriteLine($"Outdated config file, preparing for update\nCurrent Version: {global_config.Version}\nLatest: {base_cfg.Version}");
+                            var nCFG = base_cfg;
+                            nCFG.AutoLogin = global_config.AutoLogin;
+                            nCFG.VideoOnFolders = global_config.VideoOnFolders;
+                            nCFG.FlashOnFolders = global_config.FlashOnFolders;
+                            nCFG.MaxPostsPerCall = global_config.MaxPostsPerCall;
+                            nCFG.MaxPostsPerPage = global_config.MaxPostsPerPage;
+                            nCFG.DatabaseDriver = global_config.DatabaseDriver;
+                            nCFG.DatabasePath = global_config.DatabasePath;
+
+                            global_config = nCFG;
+                            writer.SaveConfigFile(nCFG);
+                            Console.WriteLine($"Configuration file update to version - {base_cfg.Version}");
+
+                        }
 
                         LoadedConfigFile = true;
                     }
