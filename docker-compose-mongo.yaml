@@ -16,7 +16,7 @@ services:
       db:
         condition: "service_healthy"
   db:
-    image: mongo/mongodb-community-server:latest
+    image: mongodb/mongodb-community-server:latest
     ports:
       - 27017:27017
     volumes:

@@ -1,3 +1,3 @@
 echo "- BUILDING IMAGE -"
-(cd ../. && exec docker build -t purr-next-dev -f Dockerfile .)
+(cd ../. && exec docker build --no-cache -t purr-next-dev -f Dockerfile .)
 echo "- DONE -"

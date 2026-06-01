@@ -1398,8 +1398,10 @@ T2_PROMPT_CHECKPOINT_4:
 
                                 var text = File.ReadAllText(LDPath);
                                 text = text.Trim();
-                                Console.WriteLine($"Loaded - {text.Replace("\r", "\\r").Replace("\n", "\\n")}");
-                                var reg = Regex.Match(text, @"U=(.+?)\r\nP=(.+)");
+
+                                //Linux doesn't use CRLF
+                                Console.WriteLine($"Loaded - {text.Replace("\n", "\\n")}");
+                                var reg = Regex.Match(text, @"U=(.+?)\nP=(.+)");
                                 if(reg.Success)
                                 {
                                     Console.WriteLine("Captured");
