@@ -98,7 +98,7 @@ namespace PURRNext
                             {
                                 Console.WriteLine("Login file detected!");
 
-                                var line = File.ReadAllLines($"{WorkDir}/Serializer.json")[0];
+                                var line = File.ReadAllLines($"{DataDir}/Serializer.json")[0];
                                 var match = Regex.Match(line, @"(.+?)\|\/\|(.+)");
 
                                 if(match.Success)
