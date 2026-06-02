@@ -28,13 +28,12 @@ namespace PURRNext.DManager
         /// <param name="path"> The path where the posts will be downloaded into </param>
         /// <param name="form"> An entry form for logging erros if needed </param>
         /// <param name="pA"> The number of posts that will be downloaded in parallel </param>
-        public DownloadManager(List<Post> post, string path, EntryForm form,int pA = 4)
+        public DownloadManager(List<Post> post, string path, EntryForm form, int pA = 4)
         {
             items = new List<DownloadItem>();
             DownloadPath = path;
             ParallelAmount = pA;
             ef = form;
-
             Console.WriteLine("Parsing posts to list and marking all as Pending\n");
 
             for(int i = 0; i < post.Count; i++)
@@ -44,25 +43,88 @@ namespace PURRNext.DManager
                     STATUS = "Pending",
                     post = post[i]
                 };
-                items.Add(item);
+                if(items.FindIndex(x=> x.post.Id == post[i].Id) == -1)
+                {
+                    items.Add(item);
+                }
+                else
+                {
+                    //This shouldn't be happening at all, but still will be here for debug purposes
+                    //If you see this, something is very wrong on how this thing is working.
+                    Console.WriteLine("Current item is already in the Download list");
+                }
             }
+
+            ef.TotalPosts = ef.TotalPosts + items.Count;
         }
         /// <summary>
         /// Clean function mean to be used internally
         /// </summary>
-        void Cleanup()
+        private void Cleanup()
         {
             Console.WriteLine("Cleaning UP\n");
+            if(ef.DownloadedPosts == ef.TotalPosts)
+            {
+                Console.WriteLine("Marking operation as success as the downloaded posts counts equals to the total fetched posts.");
+                ef.Success = true;
+            }
             items.Clear();
             DownloadPath = string.Empty;
         }
+
+        private async Task FetchPost(DownloadItem item)
+        {
+            var error = false;
+            var element = item;
+            if(element != null)
+            {     
+                var ElementPost = element.post;
+                var filename = $"{ElementPost.Id}.{ElementPost.File.FileExtension}";
+                var currentAttempt = 0;
+
+                reattempt:
+                Console.WriteLine($"Attempt({currentAttempt}) for file: {filename}");
+                try
+                {
+                    using var client = new HttpClient();
+                    client.Timeout = TimeSpan.FromSeconds(180); //Extends the timeout duration to download files to 180 Secs - 3 Minutes
+                    using var s = await client.GetStreamAsync(ElementPost.File.Location);
+                    using var fs = new FileStream($"{DownloadPath}/{filename}", FileMode.OpenOrCreate);
+                    await s.CopyToAsync(fs);
+                    element.STATUS = "COMPLETED";
+                    ef.DownloadedPosts++;
+                }
+                catch (Exception e)
+                {
+                    if(currentAttempt != 5)
+                    {
+                        Console.WriteLine($"An error has occurred\nError - {e}\n\nTrying Again");
+                        currentAttempt++;
+                        goto reattempt;
+                    }
+                    else
+                    {
+                        error = true;
+                        element.STATUS = "ERROR";
+                        goto end;
+                    }
+                }
+                end:
+                Console.WriteLine((error == false) ? $"Finished - {filename}" : "Finished with an error");
+            }
+            else
+            {
+                Console.WriteLine("Item is NULL, maybe we are already nearing the end of the list");
+            }
+        }
+
         /// <summary>
         /// Starts the download process
         /// </summary>
         public void Start()
         {
             var done = false;
-            List<DownloadItem> downloads = new List<DownloadItem>();
+            List<Task> downloads = new List<Task>();
 
             while(!done)
             {
@@ -73,18 +135,11 @@ namespace PURRNext.DManager
                     
                     if(itemIndex != -1)
                     {   
+                        Console.WriteLine("Pending item found, Downloading...");
                         var item = items.ElementAt(itemIndex);
                         item.STATUS = "Downloading";
-                        if(!downloads.Contains(item))
-                        {
-                            downloads.Add(item);
-                        }
-                        else
-                        {
-                            Console.WriteLine("Post is duplicated");
-                            Exception e = new Exception("Post is duplicated");
-                            throw e;
-                        }
+                        Task t = Task.Run(async ()=>{await FetchPost(item);});
+                        downloads.Add(t);                        
                     }
                     else
                     {
@@ -98,193 +153,7 @@ namespace PURRNext.DManager
 
                     try
                     {
-                        Task p1 = Task.Run(
-                        async ()=>
-                        {
-                            var error = false;
-                            var element = downloads.ElementAtOrDefault(0);
-                            if(element != null)
-                            {     
-                                var ElementPost = element.post;
-                                var filename = $"{ElementPost.Id}.{ElementPost.File.FileExtension}";
-                                var currentAttempt = 0;
-
-                                reattempt:
-                                Console.WriteLine($"Attempt({currentAttempt}) for file: {filename}");
-                                try
-                                {
-                                    using var client = new HttpClient();
-                                    client.Timeout = TimeSpan.FromSeconds(180); //Extends the timeout duration to download files to 180 Secs - 3 Minutes
-                                    using var s = await client.GetStreamAsync(ElementPost.File.Location);
-                                    using var fs = new FileStream($"{DownloadPath}/{filename}", FileMode.OpenOrCreate);
-                                    await s.CopyToAsync(fs);
-                                    element.STATUS = "COMPLETED";
-                                }
-                                catch (Exception e)
-                                {
-                                    if(currentAttempt != 5)
-                                    {
-                                        Console.WriteLine($"An error has occurred\nError - {e}\n\nTrying Again");
-                                        currentAttempt++;
-                                        goto reattempt;
-                                    }
-                                    else
-                                    {
-                                        error = true;
-                                        element.STATUS = "ERROR";
-                                        goto end;
-                                    }
-                                }
-                                end:
-                                Console.WriteLine((error == false) ? $"Finished - {filename}" : "Finished with an error");
-                            }
-                            else
-                            {
-                                Console.WriteLine("Item is NULL, maybe we are already nearing the end of the list");
-                            }
-                            
-                        }
-                        );
-                        Task p2 = Task.Run(
-                        async ()=>
-                        {
-                            var error = false;
-                            var element = downloads.ElementAtOrDefault(1);
-                            if(element != null)
-                            {     
-                                var ElementPost = element.post;
-                                var filename = $"{ElementPost.Id}.{ElementPost.File.FileExtension}";
-                                var currentAttempt = 0;
-
-                                reattempt:
-                                Console.WriteLine($"Attempt({currentAttempt}) for file: {filename}");
-                                try
-                                {
-                                    using var client = new HttpClient();
-                                    client.Timeout = TimeSpan.FromSeconds(180); //Extends the timeout duration to download files to 180 Secs - 3 Minutes
-                                    using var s = await client.GetStreamAsync(ElementPost.File.Location);
-                                    using var fs = new FileStream($"{DownloadPath}/{filename}", FileMode.OpenOrCreate);
-                                    await s.CopyToAsync(fs);
-                                    element.STATUS = "COMPLETED";
-                                }
-                                catch (Exception e)
-                                {
-                                    if(currentAttempt != 5)
-                                    {
-                                        Console.WriteLine($"An error has occurred\nError - {e}\n\nTrying Again");
-                                        currentAttempt++;
-                                        goto reattempt;
-                                    }
-                                    else
-                                    {
-                                        error = true;
-                                        element.STATUS = "ERROR";
-                                        goto end;
-                                    }
-                                }
-                                end:
-                                Console.WriteLine((error == false) ? $"Finished - {filename}" : "Finished with an error");
-                            }
-                            else
-                            {
-                                Console.WriteLine("Item is NULL, maybe we are already nearing the end of the list");
-                            }
-                        }
-                        );
-                        Task p3 = Task.Run(
-                        async ()=>
-                        {
-                            var error = false;
-                            var element = downloads.ElementAtOrDefault(2);
-                            if(element != null)
-                            {     
-                                var ElementPost = element.post;
-                                var filename = $"{ElementPost.Id}.{ElementPost.File.FileExtension}";
-                                var currentAttempt = 0;
-
-                                reattempt:
-                                Console.WriteLine($"Attempt({currentAttempt}) for file: {filename}");
-                                try
-                                {
-                                    using var client = new HttpClient();
-                                    client.Timeout = TimeSpan.FromSeconds(180); //Extends the timeout duration to download files to 180 Secs - 3 Minutes
-                                    using var s = await client.GetStreamAsync(ElementPost.File.Location);
-                                    using var fs = new FileStream($"{DownloadPath}/{filename}", FileMode.OpenOrCreate);
-                                    await s.CopyToAsync(fs);
-                                    element.STATUS = "COMPLETED";
-                                }
-                                catch (Exception e)
-                                {
-                                    if(currentAttempt != 5)
-                                    {
-                                        Console.WriteLine($"An error has occurred\nError - {e}\n\nTrying Again");
-                                        currentAttempt++;
-                                        goto reattempt;
-                                    }
-                                    else
-                                    {
-                                        error = true;
-                                        element.STATUS = "ERROR";
-                                        goto end;
-                                    }
-                                }
-                                end:
-                                Console.WriteLine((error == false) ? $"Finished - {filename}" : "Finished with an error");
-                            }
-                            else
-                            {
-                                Console.WriteLine("Item is NULL, maybe we are already nearing the end of the list");
-                            }
-                        }
-                        );
-                        Task p4 = Task.Run(
-                        async ()=>
-                        {
-                            var error = false;
-                            var element = downloads.ElementAtOrDefault(3);
-                            if(element != null)
-                            {     
-                                var ElementPost = element.post;
-                                var filename = $"{ElementPost.Id}.{ElementPost.File.FileExtension}";
-                                var currentAttempt = 0;
-
-                                reattempt:
-                                Console.WriteLine($"Attempt({currentAttempt}) for file: {filename}");
-                                try
-                                {
-                                    using var client = new HttpClient();
-                                    client.Timeout = TimeSpan.FromSeconds(180); //Extends the timeout duration to download files to 180 Secs - 3 Minutes
-                                    using var s = await client.GetStreamAsync(ElementPost.File.Location);
-                                    using var fs = new FileStream($"{DownloadPath}/{filename}", FileMode.OpenOrCreate);
-                                    await s.CopyToAsync(fs);
-                                    element.STATUS = "COMPLETED";
-                                }
-                                catch (Exception e)
-                                {
-                                    if(currentAttempt != 5)
-                                    {
-                                        Console.WriteLine($"An error has occurred\nError - {e}\n\nTrying Again");
-                                        currentAttempt++;
-                                        goto reattempt;
-                                    }
-                                    else
-                                    {
-                                        error = true;
-                                        element.STATUS = "ERROR";
-                                        goto end;
-                                    }
-                                }
-                                end:
-                                Console.WriteLine((error == false) ? $"Finished - {filename}" : "Finished with an error");
-                            }
-                            else
-                            {
-                                Console.WriteLine("Item is NULL, maybe we are already nearing the end of the list");
-                            }
-                        }
-                        );
-
-                        Task.WhenAll(p1, p2, p3, p4).Wait();
+                        Task.WhenAll(downloads).Wait();
                     }
                     catch (Exception e)
                     {

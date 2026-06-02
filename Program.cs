@@ -383,6 +383,7 @@ namespace PURRNext
                         Console.WriteLine($"- Auto Login - {global_config.AutoLogin}");
                         Console.WriteLine($"- Save videos on their own folder - {global_config.VideoOnFolders}");
                         Console.WriteLine($"- Save Flash Posts on their own folder - {global_config.FlashOnFolders}");
+                        Console.WriteLine($"- Parallel Posts Count - {global_config.ParallelPosts}");
                         Console.WriteLine($"- Maximum posts to retrieve by API Call - {global_config.MaxPostsPerCall}");
                         Console.WriteLine($"- Maximum posts to retrieve by Pagination - {global_config.MaxPostsPerPage}");
                         Console.WriteLine($"- Database Driver - {global_config.DatabaseDriver}");

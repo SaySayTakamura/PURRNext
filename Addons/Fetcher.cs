@@ -59,7 +59,6 @@ public class Fetcher
         ef = new EntryForm();
         ef.TAG = tags;
         ef.Date = DateTime.Now.ToString("d");
-        ef.LastKnownPath = OutputDir; 
         ef.Logged = iClient.HasLogin;      
     }
     public Fetcher(IE621Client client, string tags, int pages)
@@ -75,7 +74,6 @@ public class Fetcher
         ef = new EntryForm();
         ef.TAG = tags;
         ef.Date = DateTime.Now.ToString("d");
-        ef.LastKnownPath = OutputDir; 
         ef.Logged = iClient.HasLogin;     
     }
     public void AssignDatabaseContext(DatabaseContext context)
@@ -257,6 +255,7 @@ public class Fetcher
     {
         //Sets the work directory
         SetBaseDirectory();
+        ef.LastKnownPath = OutputDir;
 
         //Setting up the Start time of this process for the logger
         ef.Start = DateTime.Now.ToString("HH:mm");
@@ -800,6 +799,9 @@ F_PROCESS:
             }
             else
             {
+
+                Console.WriteLine($"Starting processing for path: {Path.GetRelativePath(Environment.CurrentDirectory, OutputDir)}. -------------------------------");
+
                 DownloadManager dManager;
                 //Output directories for Flash and Video files
                 //Note that GIFS aren't tagged as VIDEOS but normal posts.
@@ -882,34 +884,54 @@ F_PROCESS:
                 Console.WriteLine("Database checkup ended!");
                 PostGallery.Clear();
 
-                //Downloads posts
-                dManager = new DownloadManager(Normals, OutputDir, ef);
-                dManager.Start();
-
-                //Separation: Flash Posts/SWF Files
-                if(Configuration.FlashOnFolders == true)
+                if(Normals.Count != 0)
                 {
-                    Console.WriteLine("Creating Flash files directory.");
-                    Directory.CreateDirectory(FlashDir);
-
-
-                    Console.WriteLine("Downloading SWF files in their own folders");
-                    dManager = new DownloadManager(Flashes, FlashDir, ef);
+                    //Downloads posts
+                    dManager = new DownloadManager(Normals, OutputDir, ef, Configuration.ParallelPosts);
                     dManager.Start();
-                }
-                //Separation: Video Posts
-                if(Configuration.VideoOnFolders== true)
-                {
-                    Console.WriteLine("Creating Video files directory.");
-                    Directory.CreateDirectory(VideoDir);
-
-
-                    Console.WriteLine("Downloading Video files in their own folders");
-                    dManager = new DownloadManager(Videos, VideoDir, ef);
-                    dManager.Start();
-                }
                 
-            
+
+                    //Separation: Flash Posts/SWF Files
+                    if(Configuration.FlashOnFolders == true)
+                    {
+                        if(Flashes.Count != 0)
+                        {
+                            Console.WriteLine("Creating Flash files directory.");
+                            Directory.CreateDirectory(FlashDir);
+
+
+                            Console.WriteLine("Downloading Flash files in their own folders");
+                            dManager = new DownloadManager(Flashes, FlashDir, ef, Configuration.ParallelPosts);
+                            dManager.Start();
+                        }
+                        else
+                        {
+                            Console.WriteLine("No Flash files/posts to download.");
+                        }
+                    }
+                    //Separation: Video Posts
+                    if(Configuration.VideoOnFolders== true)
+                    {
+                        if(Videos.Count != 0)
+                        {
+                            Console.WriteLine("Creating Video files directory.");
+                            Directory.CreateDirectory(VideoDir);
+
+                            Console.WriteLine("Downloading Video files in their own folders");
+                            dManager = new DownloadManager(Videos, VideoDir, ef, Configuration.ParallelPosts);
+                            dManager.Start();
+                        }
+                        else
+                        {
+                            Console.WriteLine("No, Video files/posts to download.");
+                        }
+                    }
+                    Console.WriteLine($"Processing for path: {Path.GetRelativePath(Environment.CurrentDirectory, OutputDir)} Has finished! -------------------------------");
+                }
+                else
+                {
+                    Console.WriteLine("No posts to download.");
+                }
             }
         }
         catch (Exception e)
@@ -930,7 +952,7 @@ F_PROCESS:
         //Goodbye and log
         Console.WriteLine("Task completed");
         Console.WriteLine("Logging");
-        //LoggerInstance.Log(ef);
+        LoggerInstance.Log(ef); //Log to file as well
         dbContext.Log(ef).Wait();
         Console.WriteLine("Logging Completed");
     }

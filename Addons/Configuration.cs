@@ -16,13 +16,15 @@ namespace PURRNext.Configs
     public class Configuration
     {
         //Configuration file scheme version
-        public string Version {get; set;} = "1.9.6";
+        public string Version {get; set;} = "1.9.8-A";
         //Store videos in a separate folder
         public bool VideoOnFolders {get; set;} = true;
         //Store SWF files in a separate folder
         public bool FlashOnFolders {get; set;} = true;
         //Skips login prompt and pull credentials from storage file
         public bool AutoLogin {get; set;}= false;
+        //Number of posts to be downloaded at the same time
+        public int ParallelPosts {get; set;} = 4;
         //Max Posts to fetch per page on a single call
         public int MaxPostsPerPage {get; set;} = 75;
         //The amount of posts to fetch in a single Async call. (FetchPostsAsync)

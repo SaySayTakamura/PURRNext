@@ -1,6 +1,7 @@
 services:
   purr-next:
     image: purr-next-dev
+    container_name: "PURRNext"
     volumes:
       - ./Content:/PURRNext/Content
       - ./Data:/PURRNext/Data
@@ -10,4 +11,5 @@ services:
     #  - ./.env # Deprecated as paths are now hardcoded
     command: [
       "Docker",
+      "--db=SQL"
     ]
