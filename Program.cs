@@ -10,6 +10,7 @@ using PURRNext.Crypto.Hash;
 using PURRNext.Crypto;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Hosting;
 
 namespace PURRNext
 {
@@ -41,6 +42,11 @@ namespace PURRNext
         static void DockerMain()
         {
             DatabaseContext db = new DatabaseContext(global_config.DatabaseDriver, global_config.DatabasePath);
+            var callback = (object sender, EventArgs e) =>
+            {
+                Console.WriteLine("Application termination requested");
+            };
+            AppDomain.CurrentDomain.ProcessExit += new EventHandler(callback);
             while(true)
             {
                 //Loads the Tags file and check for the amount of returned tags
@@ -759,6 +765,7 @@ namespace PURRNext
             Console.WriteLine("--------------------------------------------\n");     
 
             Console.WriteLine($"[System] - Available Cores: {Environment.ProcessorCount}");
+            Console.WriteLine($"[System] - Platform: {Environment.MachineName}");
 
             /* var Greet = "u=hello";
             if(Greet.Contains("U=", StringComparison.CurrentCultureIgnoreCase))
