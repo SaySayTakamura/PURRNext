@@ -91,6 +91,34 @@ namespace PURRNext.DManager
                     using var s = await client.GetStreamAsync(ElementPost.File.Location);
                     using var fs = new FileStream($"{DownloadPath}/{filename}", FileMode.OpenOrCreate);
                     await s.CopyToAsync(fs);
+                    
+                    
+                    // Discarded code for AVIF image format implementation
+                    /*
+                        else
+                        {
+                            // Reference
+                            // Link: https://github.com/dlemstra/Magick.NET/blob/main/docs/ConvertImage.md
+                            // Check this if you want to stick to the older method with CopyTo
+                            // Link: https://github.com/dlemstra/Magick.NET/discussions/1592
+                            Console.WriteLine("Implementation Test for the AVIF file format is enabled");
+                            Console.WriteLine("Converting stream to AVIF");
+                            var nfilename = $"{ElementPost.Id}.AVIF";
+                            Console.WriteLine($"New file name - {nfilename}");
+
+                            Console.WriteLine("Starting Conversion      ---------");
+                            using var magick = new MagickImage(s)
+                            {
+                                Format = MagickFormat.Avif,
+                                Quality = 75,
+                                
+                                
+                            };
+                            
+                            await magick.WriteAsync($"{DownloadPath}/{nfilename}");
+                            Console.WriteLine("Conversion Ended     ---------");
+                    }
+                    */
                     element.STATUS = "COMPLETED";
                     ef.DownloadedPosts++;
                 }

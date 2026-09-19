@@ -10,41 +10,88 @@ using PURRNext.Crypto.Hash;
 using PURRNext.Crypto;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Hosting;
+using Raylib_cs;
+using rlImGui_cs;
+using ImGuiNET;
+using System.Numerics;
 
 namespace PURRNext
 {
     internal class Program
     {
+
+        //Globals
+        //Those should be passed to processes such as the fetcher.
+        //Should also be able to be accessed by all entrypoints
         //Global Logger Instance
         static Logger global_logger = new Logger();
+        //Global configuration
         static Configuration global_config = new Configuration();
 
+
         //Directories variables
-        static string WorkDir = "";
-        static string SessionDir = "";
-        static string SessionOutput = "";
-        static string LogFile = "";
-        static string UpdatesFile = "";
-        static string ConfigFile = "";
-        static string BlacklistFile = "";
+        static string WorkDir = ""; //The current Working Directory of the application
+        static string SessionDir = ""; //The "Sessions" folder inside the workdir
+        static string SessionOutput = ""; //The output of current session, normally composed like this "WorkDir/SessionDir/Search" 
+        static string LogFile = ""; //The path to the log file
+        static string UpdatesFile = ""; //Deprecated, tags to be updated periodically
+        static string ConfigFile = ""; // The Configuration file
+        static string BlacklistFile = ""; //Self explanatory, this will be parsed inside the search string
 
         //Extra directories for the Docker implementation
-        static string DataDir = "";
-        static string ContentDir = "";
-        static string TagsFile = "";
+        static string DataDir = ""; //Directories for files such the config and blacklist file
+        static string ContentDir = ""; //Directories where the search/session content is stored into
 
-        static bool LoadedConfigFile = false;
+        //The file with the queue of tags to download
+        //Note that when executing a task, this is saved on memory, only updated once all tasks are done
+        static string TagsFile = ""; 
+
+        static bool LoadedConfigFile = false; //Just an internal flag lol
 
         //Global blacklist, loaded from file
         static List<string> GlobalBlacklist = new List<string>();
+        //Blacklist functions 
+        static List<string> LoadBlackListText()
+        {
+            var result = new List<string>();
+            var lines = File.ReadAllLines(BlacklistFile);
+            for(int i = 0; i < lines.Count(); i++)
+            {
+                var line = lines[i].Trim();
+                result.Add(line);
+            }
+            return result;
+        }
+        static string ComposeBlacklistString(List<string> tags)
+        {
+            StringBuilder builder = new StringBuilder();
 
+            var result = String.Empty;
+            for(var i = 0; i < tags.Count; i++)
+            {
+                var tag = tags[i];
+                var modified_tag = $"-{tag}";
+                Console.WriteLine($"Result Tag - {modified_tag}");
+
+                builder.Append($"{modified_tag} ");
+            }
+
+            //Builds the string and trims it.
+            var s = builder.ToString();
+            result = s.Trim();
+
+            return result;
+        }
+
+        //Main docker entrypoint
         static void DockerMain()
         {
             DatabaseContext db = new DatabaseContext(global_config.DatabaseDriver, global_config.DatabasePath);
             var callback = (object sender, EventArgs e) =>
             {
                 Console.WriteLine("Application termination requested");
+                Console.WriteLine("Sending signal to all subsequent systems.");
+                throw new SigtermRequestException("-- DAEMON REQUESTED SIGTERM --");
             };
             AppDomain.CurrentDomain.ProcessExit += new EventHandler(callback);
             while(true)
@@ -172,44 +219,88 @@ namespace PURRNext
             }
         }
 
+        static void UIEntrypoint()
+        {
+            Raylib.InitWindow(1280, 720, "PURR->NEXT - NATIVE UI");
+
+            rlImGui.Setup(true);
+            ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
+
+            Raylib.SetTargetFPS(60);
+
+
+            byte[] SearchFieldByteArray = new byte[256];
+            int DropdownPostAmountCurrentItem = -1;
+            string[] DropdownPostAmountItems = ["25", "50","75", "100", "150", "200", "250", "300", "350"];
+            bool PaginationCheckbox = false;
+            int PaginationInputField = 0;     
+
+
+            while(!Raylib.WindowShouldClose())
+            {
+                Raylib.BeginDrawing();
+                
+                Raylib.ClearBackground(Color.RayWhite);
+                Raylib.DrawText("Congrats! You created your first window!", 190, 200, 20, Color.LightGray);
+
+                rlImGui.Begin();
+                ImGui.DockSpaceOverViewport();
+
+                ImGui.Begin("Search Form");
+                ImGui.InputText("Put your tags here", SearchFieldByteArray, 256);
+                var TagString = Encoding.UTF8.GetString(SearchFieldByteArray);
+                ImGui.Text(TagString);
+                ImGui.Combo("Amount", ref DropdownPostAmountCurrentItem, DropdownPostAmountItems, DropdownPostAmountItems.Count());
+
+                ImGui.Checkbox("Pagination?", ref PaginationCheckbox);
+                if(PaginationCheckbox == false)
+                {
+                    ImGui.BeginDisabled();
+                    ImGui.InputInt("Pages", ref PaginationInputField);
+                    ImGui.EndDisabled();
+                }
+                else
+                {
+                    ImGui.InputInt("Pages", ref PaginationInputField);
+                    if(PaginationInputField == -1)
+                    {
+                        ImGui.SameLine();
+                        ImGui.TextColored(new Vector4(255.0f, 0.0f, 150.0f, 1.0f), "NUMBER OF PAGES CAN'T BE NEGATIVE.");
+                    }
+                }
+                if(PaginationInputField == 0 || TagString.Length == 0 || DropdownPostAmountCurrentItem == -1)
+                {
+                    ImGui.BeginDisabled();
+                    ImGui.Button("Fetch");
+                    ImGui.EndDisabled();
+                }
+                else
+                {
+                    if(ImGui.Button("Fetch"))
+                    {
+                        Console.WriteLine("Fetching...");
+                    }
+                }
+
+                ImGui.End();
+
+                ImGui.ShowDemoWindow();
+                rlImGui.End();
+
+                Raylib.EndDrawing();
+                
+            }
+            Raylib.CloseWindow();
+            rlImGui.Shutdown();
+        }
+
+        //Deprecated, set to be removed on PURR>>>Next 1.5
         static void DockerUpdater()
         {
 
         }
 
-        //Loads blacklist file
-        static List<string> LoadBlackListText()
-        {
-            var result = new List<string>();
-            var lines = File.ReadAllLines(BlacklistFile);
-            for(int i = 0; i < lines.Count(); i++)
-            {
-                var line = lines[i].Trim();
-                result.Add(line);
-            }
-            return result;
-        }
-        static string ComposeBlacklistString(List<string> tags)
-        {
-            StringBuilder builder = new StringBuilder();
-
-            var result = String.Empty;
-            for(var i = 0; i < tags.Count; i++)
-            {
-                var tag = tags[i];
-                var modified_tag = $"-{tag}";
-                Console.WriteLine($"Result Tag - {modified_tag}");
-
-                builder.Append($"{modified_tag} ");
-            }
-
-            //Builds the string and trims it.
-            var s = builder.ToString();
-            result = s.Trim();
-
-            return result;
-        }
-
+ 
         //Further tests required
         //Use relative directory for Docker volumes instead of Environment.CurrentDirectory
         //Until proven itself useful
@@ -533,7 +624,7 @@ namespace PURRNext
                 Console.WriteLine("Tags file does not exist, creating one!");
                 using (FileStream fs = File.Create(tags_file))
                 {
-                    byte[] info = new UTF8Encoding(true).GetBytes($"");
+                    byte[] info = new UTF8Encoding(true).GetBytes($"t:tags/p:pages/a:amount_of_posts");
                     // Add some information to the file.
                     fs.Write(info, 0, info.Length);
                     fs.Close(); //Remove in case of regret
@@ -758,8 +849,8 @@ namespace PURRNext
             Console.WriteLine("-------------------------------------------------- --    -\n");
 
             Console.WriteLine("     PURR NEXT - An E621 CLI BACKEND (WIP)");
-            Console.WriteLine("     VERSION - 0.8.5");
-            Console.WriteLine("     Author: Edgar Takamura");
+            Console.WriteLine("     VERSION - 0.8.7");
+            Console.WriteLine("     Author: Roxanne Takamura");
 
             Console.WriteLine("\n-------------------------------------------------- --    -");
             Console.WriteLine("--------------------------------------------\n");     
@@ -1142,7 +1233,6 @@ T2_PASSWORD_INPUT_CHECKPOINT:
                                 if (key.Key == ConsoleKey.Enter)
                                 {
                                     Console.Write("\n");
-
                                     break;
                                 }
                                 if (key.Key != ConsoleKey.Backspace)
@@ -1189,7 +1279,6 @@ T2_PROMPT_CHECKPOINT_4:
                                     if (key.Key == ConsoleKey.Enter)
                                     {
                                         Console.Write("\n");
-
                                         break;
                                     }
                                     if (key.Key != ConsoleKey.Backspace)
@@ -1223,7 +1312,6 @@ T2_PROMPT_CHECKPOINT_4:
                                     var encrypted_usrnm = StringCipher.Encrypt(username, mp_hash);
                                     var encrypted_apk = StringCipher.Encrypt(apk, mp_hash);
                                     LoginData = new LoginInputData(encrypted_usrnm, encrypted_apk, mp_hash);
-
 
                                     //Sets options for the serializers
                                     /*
@@ -1421,7 +1509,7 @@ T2_PROMPT_CHECKPOINT_4:
                                 var reg = Regex.Match(text, @"U=(.+?)\nP=(.+)");
                                 if(reg.Success)
                                 {
-                                    Console.WriteLine("Captured");
+                                    //Console.WriteLine("Captured");
                                     Console.WriteLine($"U={reg.Groups[1].Value}");
                                     Console.WriteLine($"P={reg.Groups[2].Value}");
                                     ui = reg.Groups[1].Value;
@@ -1544,8 +1632,19 @@ T2_PROMPT_CHECKPOINT_4:
             else if(mode == "GUI")
             {
                 Console.WriteLine("Running on GUI mode!");
+                UIEntrypoint();
+                Console.WriteLine("End of GUI runtime, goodbye");
+                Console.ReadKey();
+                Environment.Exit(0);
             }
-
+            else if(mode == "QUICK")
+            {
+                Console.WriteLine("Welcome to PURR->NEXT Quick mode");
+                Console.WriteLine("Here we load a file with all the post ids you've collected");
+                Console.WriteLine("And download them into a separade 'Downloads' folder.");
+                Console.WriteLine("Is kinda better if you don't want to download a whole collection and such");
+                Console.WriteLine("Like how it's done in normal purr.");
+            }
             /* var e621Client = new E621ClientBuilder()
             .WithUserAgent("PURRNext- An E621 CLI BACKEND", "0.01", "EdgarTakamura", "Bluesky")
             .WithMaximumConnections(E621Constants.MaximumConnectionsLimit)

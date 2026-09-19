@@ -17,16 +17,16 @@ WORKDIR /PURRNext
 
 # Copies the Login script into the directory
 # It also gives the script execution rights
-COPY ./InternalScripts/Login.sh /PURRNext/Scripts/log.sh
-RUN chmod a+x /PURRNext/Scripts/log.sh
+COPY ./InternalScripts/Login.sh /PURRNext/Scripts/log
+RUN chmod a+x /PURRNext/Scripts/log
 # Taken from:
 # Link: https://stackoverflow.com/questions/46188012/how-do-i-add-directories-to-path
 # And
 # Link: https://stackoverflow.com/questions/5130847/running-multiple-commands-in-one-line-in-shell
 # RUN PATH=$PATH:/PURRNext/Scripts ; export PATH
 # Taken from:
-# Link: https://stackoverflow.com/questions/17701989/how-do-i-append-text-to-a-file
-RUN echo "export PATH=$PATH:/PURRNext/Scripts" >> ~/.bash_profile
+# Link: https://stackoverflow.com/questions/27093612/in-a-dockerfile-how-to-update-path-environment-variable
+ENV PATH="$PATH:/PURRNext/Scripts"
 
 COPY --from=build /PURRNext/out .
 ENTRYPOINT ["dotnet", "PURRNext.dll"]

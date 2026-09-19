@@ -910,7 +910,7 @@ F_PROCESS:
                         }
                     }
                     //Separation: Video Posts
-                    if(Configuration.VideoOnFolders== true)
+                    if(Configuration.VideoOnFolders == true)
                     {
                         if(Videos.Count != 0)
                         {
