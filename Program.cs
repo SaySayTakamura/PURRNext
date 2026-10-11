@@ -754,7 +754,7 @@ namespace PURRNext
                     {
                         Console.WriteLine("Selected DB - PostgreSQL");
                         cfg.DatabaseDriver = "PSQL";
-                        cfg.DatabasePath = $"PENDING";
+                        cfg.DatabasePath = $"host=db;username=admin;password=admin;";
                         Console.WriteLine("Assigned mongodb instance path and Driver\nInstance URL: db:27017\nNote that you need to change 'db' your host address so you can access it from other sources");
                     }
                     else

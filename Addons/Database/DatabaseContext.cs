@@ -44,7 +44,7 @@ public class DatabaseContext
         {
             dbDriver = "postgresql";
             var connectionString = dbPath;
-            postRepository = new PSQLPostRepository(connectionString);
+            postRepository = new PSQLPostRepository($"{connectionString}database=posts");
 
         }
         else

@@ -12,7 +12,10 @@ public class PSQLPostRepository : IPostRepository
     //Taken from: https://github.com/JasperFx/marten/blob/master/docs/getting-started.md
     public PSQLPostRepository(string connectionString)
     {
-        _store = DocumentStore.For(connectionString);
+        _store = DocumentStore.For(opts =>
+        {
+            opts.Connection(connectionString);
+        });
     }
 
     //Read
