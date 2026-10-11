@@ -49,7 +49,6 @@ public class SQLPoolEntry
 
 public interface  IPoolRepository
 {
-    Task<Pool?> GetPoolByIDAsync(string ID);
     Task<Pool?> GetPoolByIDAsync(int ID);
     Task<bool> SavePoolAsync(Pool pool);
 }

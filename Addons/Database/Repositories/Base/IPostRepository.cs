@@ -10,9 +10,9 @@ public class PostEntry
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
-    public string? ID {get; set;}
-    public string? PostPath {get; set;}
-    public Post? Post {get; set; }
+    public string? ID { get; set; }
+    public string? PostPath { get; set; }
+    public Post? Post { get; set; }
 
     //No need
     // Mongo DB returns the whole object (PostEntry) as null if it isn't found in the db
@@ -58,7 +58,15 @@ public class SQLPostEntry
 //Study Material from: https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/interface
 public interface IPostRepository
 {
-    Task<Post?> GetPostByIDAsync(string ID);
+    //Read
     Task<Post?> GetPostByIDAsync(int ID);
+
+    //Create
     Task<bool> SavePostAsync(Post post, string filePath = "");
+
+    //Update
+    Task<bool> UpdatePost(int ID, Post newPost);
+
+    //Delete
+    Task<bool> RemovePost(string ID);
 }

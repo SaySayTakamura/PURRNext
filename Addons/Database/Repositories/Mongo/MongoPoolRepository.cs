@@ -29,16 +29,11 @@ public class MongoPoolRepository : IPoolRepository
         }
     }
 
-    public async Task<Pool?> GetPoolByIDAsync(string ID)
-    {
-        var Entry = await _collection.Find(p => p.pool.Id.ToString() == ID).FirstOrDefaultAsync();
-        if(Entry != null)
-        {
-            return Entry.pool;
-        }
-        return null;
-    }
+    //TODO
+    //Follow CRUD'S Architecture
 
+
+    //Read
     public async Task<Pool?> GetPoolByIDAsync(int ID)
     {
         var Entry = await _collection.Find(p => p.pool.Id == ID).FirstOrDefaultAsync();
@@ -49,10 +44,11 @@ public class MongoPoolRepository : IPoolRepository
         return null;
     }
 
+    //Create
     public async Task<bool> SavePoolAsync(Pool pool)
     {
         var pid = pool.Id;
-        var result = await GetPoolByIDAsync(pid.ToString());
+        var result = await GetPoolByIDAsync(pid);
 
         if(result == null)
         {
@@ -66,4 +62,9 @@ public class MongoPoolRepository : IPoolRepository
         }
         return false;
     }
+
+    //TODO: Update
+
+    //TODO: Delete
+
 }

@@ -35,18 +35,17 @@ public class SQLPoolRepository : IPoolRepository
     }
 #endregion
 
-//CRUD Operations
-#region 
-    public async Task<Pool?> GetPoolByIDAsync(string id)
-    {
-        var PoolData = await _db.Table<SQLPoolEntry>().Where(x => x.PoolID.ToString() == id).FirstOrDefaultAsync();
-        return PoolData.Reconstruct();
-    }
+    //TODO
+    //Follow CRUD'S Architecture
+
+    //Read
     public async Task<Pool?> GetPoolByIDAsync(int id)
     {
         var postData = await _db.Table<SQLPoolEntry>().Where(x => x.PoolID == id).FirstOrDefaultAsync();
         return postData.Reconstruct();
     }
+    
+    //Create
     public async Task<bool> SavePoolAsync(Pool pool)
     {
         if(pool != null)
@@ -72,5 +71,8 @@ public class SQLPoolRepository : IPoolRepository
         }
         return false;
     }
-#endregion
+
+    //TODO: Update
+
+    //TODO: Delete
 }

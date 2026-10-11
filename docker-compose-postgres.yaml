@@ -1,0 +1,35 @@
+services:
+  purr-next:
+    image: purr-next-dev
+    container_name: "PURRNext"
+    volumes:
+      - ./Content:/PURRNext/Content
+      - ./Data:/PURRNext/Data
+    #ports:
+    #  - 5064:4096 #Live UI
+    #env_file:
+    #  - ./.env # Deprecated as paths are now hardcoded
+    command: [
+      "Docker",
+      "--db=PSQL"
+    ]
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:18
+    container_name: "PURRNextDB"
+    volumes:
+      - ./Data/postsgres:/var/lib/postgresql
+      - ./Scripts/DB/SetupDB.sql:/docker-entrypoint-initdb.d/initdb.sql:ro
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - 54325:5432
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "index']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

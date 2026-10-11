@@ -40,6 +40,13 @@ public class DatabaseContext
             poolRepository = new SQLPoolRepository(connection);
             logRepository = new SQLLogRepository(connection);
         }
+        else if(driv == "psql") //TODO
+        {
+            dbDriver = "postgresql";
+            var connectionString = dbPath;
+            postRepository = new PSQLPostRepository(connectionString);
+
+        }
         else
         {
             Console.WriteLine("Invalid Driver Selection");
@@ -47,20 +54,22 @@ public class DatabaseContext
             Console.ReadLine();
         }
     }
+
+    //As of 19/09/2026 this has 0 references
+    //Why?
+    //I don't know either. But i am not removing it for the time being.
     public string GetDriverName()
     {
         return dbDriver;
     }
 #region POSTS
-    public async Task<bool> PostExists(string id)
+    public async Task<bool> AddPost(Post post, string path)
     {
-        var postData = await postRepository.GetPostByIDAsync(id);
-        if(postData != null)
-        {
-            return true;
-        }
-        return false;
+        return await postRepository.SavePostAsync(post, path);
     }
+#endregion
+
+#region UTILS
     public async Task<bool> PostExists(int id)
     {
         var postData = await postRepository.GetPostByIDAsync(id);
@@ -71,13 +80,6 @@ public class DatabaseContext
         return false;
     }
 
-    public async Task<bool> AddPost(Post post, string path)
-    {
-        return await postRepository.SavePostAsync(post, path);
-    }
-#endregion
-
-#region UTILS
     public async Task Log(EntryForm form)
     {
         await logRepository.LogToDatabase(form);

@@ -16,7 +16,7 @@ namespace PURRNext.Configs
     public class Configuration
     {
         //Configuration file scheme version
-        public string Version {get; set;} = "1.9.8-A";
+        public string Version {get; set;} = "2.0.5-6";
         //Store videos in a separate folder
         public bool VideoOnFolders {get; set;} = true;
         //Store SWF files in a separate folder
@@ -32,6 +32,9 @@ namespace PURRNext.Configs
         //Start a search with a list of "searches" inside a file.
         public bool TagsFromFile {get; set;} = false;
         //Which database to be used with the app, MONGO or SQL
+        //Note: THe Docker entrypoint overwrites the DatabasePath value to its Data Directory
+        //On windows this is not needed as it's very easy to throw lots of files on the program root folder.
+        //But on docker i'd like to keep things organized
         public string DatabaseDriver {get; set;} = "SQL";
         public string DatabasePath {get; set;} = "./db.sqlite";
         

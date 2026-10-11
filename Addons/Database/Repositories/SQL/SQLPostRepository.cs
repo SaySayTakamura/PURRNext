@@ -1,6 +1,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using Newtonsoft.Json;
 using Noppes.E621;
 using SQLite;
 
@@ -34,17 +35,10 @@ public class SQLPostRepository : IPostRepository
     }
 #endregion
 
-//CRUD Operations
-#region 
-    public async Task<Post?> GetPostByIDAsync(string id)
-    {
-        var postData = await _db.Table<SQLPostEntry>().Where(x => x.PostID.ToString() == id).FirstOrDefaultAsync();
-        if(postData != null)
-        {
-            return postData.Reconstruct();
-        }
-        return null;
-    }
+    //TODO
+    //Follow CRUD'S Architecture
+
+    //Read
     public async Task<Post?> GetPostByIDAsync(int id)
     {
         var postData = await _db.Table<SQLPostEntry>().Where(x => x.PostID == id).FirstOrDefaultAsync();
@@ -54,18 +48,25 @@ public class SQLPostRepository : IPostRepository
         }
         return null;
     }
-
+    
+    //Create
     public async Task<bool> SavePostAsync(Post post, string filePath)
     {
         if(post != null)
         {
+            // Following section commneted to follow fix on main program
+            // Line number: 1316
+            // Implemented Newtonsoft's JSONConvert instead.
             //Sets options for the serializers
+            /*
             System.Text.Json.JsonSerializerOptions opts = new()
             {
                 IncludeFields = true
             };
+            */
 
-            var postData = System.Text.Json.JsonSerializer.Serialize(post, options: opts);
+            //var postData = System.Text.Json.JsonSerializer.Serialize(post, options: opts);
+            var postData = JsonConvert.SerializeObject(post);
             var HashEngine = SHA256.Create();
             var postHash = Convert.ToHexString(HashEngine.ComputeHash(Encoding.UTF8.GetBytes(postData)));
 
@@ -81,5 +82,16 @@ public class SQLPostRepository : IPostRepository
         }
         return false;
     }
-#endregion
+
+//Update
+    public async Task<bool> UpdatePost(int ID, Post newPost)
+    {
+        throw new NotImplementedException();
+    }
+
+    //Delete
+    public async Task<bool> RemovePost(string ID)
+    {
+        throw new NotImplementedException();
+    }
 }

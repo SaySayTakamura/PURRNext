@@ -748,12 +748,24 @@ namespace PURRNext
                         Console.WriteLine("Selected DB - SQLite");
                         cfg.DatabaseDriver = "SQL";
                         cfg.DatabasePath = $"{data_path}/db.sqlite";
+                        Console.WriteLine($"Assigned SQLite database path and Driver\nDatabase file path: {cfg.DatabasePath}");
+                    }
+                    else if(data_path == "psql")
+                    {
+                        Console.WriteLine("Selected DB - PostgreSQL");
+                        cfg.DatabaseDriver = "PSQL";
+                        cfg.DatabasePath = $"PENDING";
                         Console.WriteLine("Assigned mongodb instance path and Driver\nInstance URL: db:27017\nNote that you need to change 'db' your host address so you can access it from other sources");
                     }
                     else
                     {
                         Console.WriteLine($"Invalid DB Driver, check your the entrypoint arguments and try again!\nProvided DB Driver vie entrypoint argument: {db}");
                     }
+                }
+                else
+                {
+                    Console.WriteLine("[EXCEPTION][EXCEPTION] - THE DATABASE DRIVER COMMAND LINE ARGUMENT SHOULDN'T BE NULL");
+                    Environment.Exit(-666);
                 }
 
                 ConfigurationWriter c_wrtr = new ConfigurationWriter();
@@ -856,7 +868,7 @@ namespace PURRNext
             Console.WriteLine("--------------------------------------------\n");     
 
             Console.WriteLine($"[System] - Available Cores: {Environment.ProcessorCount}");
-            Console.WriteLine($"[System] - Platform: {Environment.MachineName}");
+            Console.WriteLine($"[System] - Platform: {Environment.OSVersion}");
 
             /* var Greet = "u=hello";
             if(Greet.Contains("U=", StringComparison.CurrentCultureIgnoreCase))
@@ -1643,7 +1655,7 @@ T2_PROMPT_CHECKPOINT_4:
                 Console.WriteLine("Here we load a file with all the post ids you've collected");
                 Console.WriteLine("And download them into a separade 'Downloads' folder.");
                 Console.WriteLine("Is kinda better if you don't want to download a whole collection and such");
-                Console.WriteLine("Like how it's done in normal purr.");
+                Console.WriteLine("Like how it's done in normal PURR.");
             }
             /* var e621Client = new E621ClientBuilder()
             .WithUserAgent("PURRNext- An E621 CLI BACKEND", "0.01", "EdgarTakamura", "Bluesky")

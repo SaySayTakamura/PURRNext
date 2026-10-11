@@ -29,15 +29,10 @@ public class MongoPostRepository : IPostRepository
         }
     }
 
-    public async Task<Post?> GetPostByIDAsync(string ID)
-    {
-        var Entry = await _collection.Find(x=> x.Post.Id.ToString() == ID).FirstOrDefaultAsync();
-        if(Entry != null)
-        {
-            return Entry.Post;
-        }
-        return null;
-    }
+    //TODO
+    //Follow CRUD'S Architecture
+
+    //Read
     public async Task<Post?> GetPostByIDAsync(int ID)
     {
         var Entry = await _collection.Find(x=> x.Post.Id == ID).FirstOrDefaultAsync();
@@ -48,10 +43,12 @@ public class MongoPostRepository : IPostRepository
         return null;
     }
 
+    //Create
     public async Task<bool> SavePostAsync(Post post, string filePath)
     {
+        /*
         var pid = post.Id;
-        var result = await GetPostByIDAsync(pid.ToString());
+        var result = await GetPostByIDAsync(pid);
 
         if(result == null)
         {
@@ -64,6 +61,33 @@ public class MongoPostRepository : IPostRepository
             await _collection.InsertOneAsync(entry);
             return true;
         }
+        */
+        try
+        {
+            PostEntry entry = new PostEntry
+            {
+                PostPath = filePath,
+                Post = post
+            };
+            await _collection.InsertOneAsync(entry);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] - {ex.ToString()}");
+        }
         return false;
+    }
+
+    //Update
+    public async Task<bool> UpdatePost(int ID, Post newPost)
+    {
+        throw new NotImplementedException();
+    }
+
+    //Delete
+    public async Task<bool> RemovePost(string ID)
+    {
+        throw new NotImplementedException();
     }
 }

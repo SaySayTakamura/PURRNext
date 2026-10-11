@@ -24,7 +24,7 @@ services:
     volumes:
       - ./mongodb/data:/data/db
       - ./mongodb/config:/data/configdb
-      - ./Scripts/DB/Setup.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./Scripts/DB/SetupDB.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 10m
