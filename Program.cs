@@ -755,7 +755,7 @@ namespace PURRNext
                         Console.WriteLine("Selected DB - PostgreSQL");
                         cfg.DatabaseDriver = "PSQL";
                         cfg.DatabasePath = $"host=db:5432;username=admin;password=admin;";
-                        Console.WriteLine("Assigned mongodb instance path and Driver\nInstance URL: db:27017\nNote that you need to change 'db' your host address so you can access it from other sources");
+                        Console.WriteLine("Assigned PostgreSQL instance path and driver\nInstance URL: db:5432\nNote that you need to change 'db' your host address so you can access it from other machines(and don't forget to use the host port bind instead of the container port, on our case 54325)");
                     }
                     else
                     {

@@ -22,7 +22,7 @@ public class PSQLPostRepository : IPostRepository
     public async Task<Post?> GetPostByIDAsync(int ID)
     {
         await using var session = _store.LightweightSession();
-        var entry = await session.Query<PostEntry>().FirstOrDefaultAsync(x => x.Post.Id == ID);
+        var entry = await session.Query<PSQLPostEntry>().FirstOrDefaultAsync(x => x.Post.Id == ID);
         if(entry != null)
         {
             return entry.Post;
@@ -36,7 +36,7 @@ public class PSQLPostRepository : IPostRepository
         try
         {
             await using var session = _store.LightweightSession();
-            PostEntry entry = new PostEntry
+            PSQLPostEntry entry = new PSQLPostEntry
             {
                 PostPath = filePath,
                 Post = post

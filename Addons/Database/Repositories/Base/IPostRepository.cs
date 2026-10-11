@@ -24,6 +24,15 @@ public class PostEntry
     }
     */
 }
+
+public class PSQLPostEntry
+{
+    public Guid ID { get; set; }
+    public string? PostPath { get; set; }
+    public Post? Post { get; set; }
+
+}
+
 //Defines the database entry for a POST
 //SQLite
 public class SQLPostEntry
