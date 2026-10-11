@@ -750,7 +750,7 @@ namespace PURRNext
                         cfg.DatabasePath = $"{data_path}/db.sqlite";
                         Console.WriteLine($"Assigned SQLite database path and Driver\nDatabase file path: {cfg.DatabasePath}");
                     }
-                    else if(data_path == "psql")
+                    else if(db == "psql")
                     {
                         Console.WriteLine("Selected DB - PostgreSQL");
                         cfg.DatabaseDriver = "PSQL";
